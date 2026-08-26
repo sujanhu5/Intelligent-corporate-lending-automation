@@ -4,7 +4,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
   AreaChart, Area, CartesianGrid,
-  LineChart, Line,
 } from 'recharts'
 import { applicationsApi } from '@/api/applications'
 import { predictionsApi } from '@/api/predictions'
@@ -17,8 +16,6 @@ import type {
 import PageHeader from '@/components/ui/PageHeader'
 import { PageLoader } from '@/components/ui/Spinner'
 import Button from '@/components/ui/Button'
-import { useToast } from '@/components/ui/Toast'
-import { extractError } from '@/api/client'
 import { useAuthStore } from '@/store/auth'
 
 const PIE_COLORS = ['#12A150', '#E5484D', '#F4A300', '#EF6C1A', '#C9C0B4']
@@ -89,10 +86,8 @@ export default function Dashboard() {
   const [purposeData, setPurposeData] = useState<LoanPurposeBreakdown[]>([])
   const [funnel, setFunnel] = useState<PipelineFunnelStage[]>([])
   const [pipelineMetrics, setPipelineMetrics] = useState<PipelineMetrics | null>(null)
-  const [training, setTraining] = useState(false)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
-  const { success, error } = useToast()
   const { user } = useAuthStore()
 
   useEffect(() => {
@@ -115,20 +110,6 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleTrain = async () => {
-    setTraining(true)
-    try {
-      await predictionsApi.train()
-      const m = await predictionsApi.modelStatus()
-      setModelStatus(m)
-      success('Models retrained successfully.')
-    } catch (err) {
-      error(extractError(err))
-    } finally {
-      setTraining(false)
-    }
-  }
-
   if (loading) return <PageLoader />
 
   const approvalRate = stats?.total ? Math.round((stats.approved / stats.total) * 100) : 0
@@ -143,16 +124,6 @@ export default function Dashboard() {
     { name: 'In Pipeline', value: stats.in_pipeline },
     { name: 'Draft', value: stats.draft },
   ].filter(d => d.value > 0) : []
-
-  const barData = modelStatus?.model_metrics
-    ? Object.entries(modelStatus.model_metrics).map(([name, m]) => ({
-        name: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-        'Accuracy': +(m.accuracy * 100).toFixed(1),
-        'ROC-AUC': +(m.roc_auc * 100).toFixed(1),
-        'Precision': +(m.precision * 100).toFixed(1),
-        'Recall': +(m.recall * 100).toFixed(1),
-      }))
-    : []
 
   const funnelMax = funnel.length > 0 ? Math.max(...funnel.map(f => f.count)) : 0
 
@@ -389,38 +360,8 @@ export default function Dashboard() {
         </ChartCard>
       </div>
 
-      {/* Row 4: ML Model Performance + Pipeline Bottleneck */}
+      {/* Row 4: Pipeline Metrics + Automation Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        <ChartCard title="ML Model Performance" subtitle={
-          modelStatus?.trained_at
-            ? `Last trained ${new Date(modelStatus.trained_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
-            : 'Not trained yet'
-        }>
-          <div className="flex items-center justify-end mb-3 -mt-2">
-            <Button variant="secondary" size="sm" onClick={handleTrain} loading={training}>
-              Retrain Models
-            </Button>
-          </div>
-          {barData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={barData} barGap={2}>
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis domain={[50, 100]} tick={{ fontSize: 10 }} unit="%" />
-                <Tooltip formatter={(v: number) => [`${v}%`]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                <Bar dataKey="Accuracy" fill="var(--cr-500)" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="ROC-AUC" fill="var(--cr-300)" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Precision" fill="#3B82F6" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Recall" fill="#8B5CF6" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[200px] gap-3">
-              <p className="text-ink-muted text-small">Models not trained yet.</p>
-              <Button size="sm" onClick={handleTrain} loading={training}>Train Now</Button>
-            </div>
-          )}
-        </ChartCard>
-
         <ChartCard title="Pipeline Stage Metrics" subtitle="Completion rates by stage">
           {pipelineMetrics && Object.keys(pipelineMetrics.stage_completion).length > 0 ? (
             <div className="flex flex-col gap-3">
@@ -456,48 +397,57 @@ export default function Dashboard() {
             <div className="flex items-center justify-center h-[200px] text-ink-muted text-small">No pipeline metrics.</div>
           )}
         </ChartCard>
-      </div>
 
-      {/* Row 5: Model detail cards */}
-      {modelStatus?.model_metrics && (
-        <div className="mb-5">
-          <h3 className="text-sm font-bold text-ink-primary font-mono mb-3">Model Comparison</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(modelStatus.model_metrics).map(([name, m]) => {
-              const isBest = modelStatus.best_model === name
-              return (
-                <div key={name} className={`card p-4 ${isBest ? 'border-2 border-primary' : ''}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs font-bold text-ink-primary font-mono capitalize">{name.replace(/_/g, ' ')}</h4>
-                    {isBest && (
-                      <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full gradient-orange text-white">Primary</span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: 'Accuracy', val: m.accuracy },
-                      { label: 'ROC-AUC', val: m.roc_auc },
-                      { label: 'Precision', val: m.precision },
-                      { label: 'Recall', val: m.recall },
-                      { label: 'F1 Score', val: m.f1 },
-                      { label: 'CV AUC', val: m.cv_roc_auc_mean },
-                    ].map(met => (
-                      <div key={met.label}>
-                        <div className="text-[9px] font-bold uppercase tracking-wider text-ink-muted font-mono">{met.label}</div>
-                        <div className={`text-sm font-extrabold font-mono tabular ${
-                          met.val >= 0.9 ? 'text-green-600' : met.val >= 0.7 ? 'text-amber-600' : 'text-red-600'
-                        }`}>
-                          {(met.val * 100).toFixed(1)}%
-                        </div>
-                      </div>
-                    ))}
+        <ChartCard title="Automation Status" subtitle="Credit assessment engine health">
+          <div className="flex flex-col gap-3">
+            <div className={`flex items-center gap-3 p-3 rounded-lg ${modelStatus?.models_trained ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${modelStatus?.models_trained ? 'bg-green-500' : 'bg-amber-500'}`} />
+              <div className="flex-1">
+                <div className="text-xs font-bold text-ink-primary">Risk Scoring Engine</div>
+                <div className="text-[11px] text-ink-secondary mt-0.5">
+                  {modelStatus?.models_trained ? 'Active — processing applications automatically' : 'Not initialized — contact system admin'}
+                </div>
+              </div>
+            </div>
+            {modelStatus?.trained_at && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-ink-primary">Last Calibrated</div>
+                  <div className="text-[11px] text-ink-secondary mt-0.5">
+                    {new Date(modelStatus.trained_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </div>
                 </div>
-              )
-            })}
+              </div>
+            )}
+            {modelStatus?.best_roc_auc != null && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-ink-primary">Prediction Accuracy</div>
+                  <div className="text-[11px] text-ink-secondary mt-0.5">
+                    {(modelStatus.best_roc_auc * 100).toFixed(1)}% confidence score
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-xs font-bold text-ink-primary">Document OCR</div>
+                <div className="text-[11px] text-ink-secondary mt-0.5">Active — extracts financial data from uploaded PDFs</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-xs font-bold text-ink-primary">Rule Engine</div>
+                <div className="text-[11px] text-ink-secondary mt-0.5">Active — evaluating credit policies on every application</div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        </ChartCard>
+      </div>
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

@@ -22,6 +22,7 @@ import PortalDashboard from '@/pages/portal/PortalDashboard'
 import PortalApplications from '@/pages/portal/PortalApplications'
 import PortalApplicationDetail from '@/pages/portal/PortalApplicationDetail'
 import PortalCompany from '@/pages/portal/PortalCompany'
+import PortalDocuments from '@/pages/portal/PortalDocuments'
 
 function AppInitializer() {
   const { initialize, initialized } = useAuthStore()
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/portal"                    element={<PortalDashboard />} />
             <Route path="/portal/applications"       element={<PortalApplications />} />
             <Route path="/portal/applications/:id"   element={<PortalApplicationDetail />} />
+            <Route path="/portal/documents"          element={<PortalDocuments />} />
             <Route path="/portal/company"            element={<PortalCompany />} />
           </Route>
 

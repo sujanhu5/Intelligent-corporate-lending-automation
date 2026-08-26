@@ -12,4 +12,17 @@ export const portalApi = {
 
   applicationDetail: (id: string) =>
     client.get(`/portal/applications/${id}`).then(r => r.data),
+
+  documents: () =>
+    client.get('/portal/documents').then(r => r.data),
+
+  uploadDocument: (applicationId: string, file: File, documentType: string, financialYear?: string) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('document_type', documentType)
+    if (financialYear) form.append('financial_year', financialYear)
+    return client.post(`/portal/documents/upload/${applicationId}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data)
+  },
 }

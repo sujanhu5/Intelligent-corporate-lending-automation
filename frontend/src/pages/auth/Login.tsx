@@ -15,24 +15,24 @@ const PORTALS: { key: PortalType; title: string; subtitle: string; accent: strin
     key: 'company',
     title: 'Company Portal',
     subtitle: 'Apply for corporate loans, upload financial documents, and track your application through every stage of the pipeline.',
-    accent: 'border-blue-500/40 hover:border-blue-500',
-    iconBg: 'bg-blue-500',
+    accent: 'border-[var(--cr-300)]/40 hover:border-[var(--cr-500)]',
+    iconBg: 'gradient-orange',
     badge: 'APPLICANT',
   },
   {
     key: 'bank',
     title: 'Bank Staff Portal',
     subtitle: 'Review applications, run credit assessments, manage the pipeline, and make lending decisions.',
-    accent: 'border-amber-500/40 hover:border-amber-500',
-    iconBg: 'bg-amber-500',
+    accent: 'border-[var(--cr-400)]/40 hover:border-[var(--cr-600)]',
+    iconBg: 'bg-[var(--cr-700)]',
     badge: 'OFFICER',
   },
   {
     key: 'admin',
     title: 'System Administration',
     subtitle: 'Full platform control — manage users, companies, rules, ML models, and system configuration.',
-    accent: 'border-violet-500/40 hover:border-violet-500',
-    iconBg: 'bg-violet-500',
+    accent: 'border-[var(--cr-800)]/40 hover:border-[var(--cr-800)]',
+    iconBg: 'bg-[var(--cr-900)]',
     badge: 'ADMIN',
   },
 ]
@@ -98,7 +98,7 @@ export default function Login() {
       {/* Left branded panel */}
       <div className="hidden lg:flex lg:w-[480px] xl:w-[540px] flex-col justify-between p-10 relative overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          background: 'linear-gradient(135deg, #1C1209 0%, #2A1608 45%, #3D1E08 100%)',
         }}>
         <div className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -109,7 +109,7 @@ export default function Login() {
 
         <div className="relative z-10">
           <Link to="/" className="flex items-center gap-3 mb-16">
-            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
+            <div className="w-10 h-10 rounded-xl gradient-orange flex items-center justify-center shadow-orange">
               <span className="text-white font-extrabold text-sm font-mono">CL</span>
             </div>
             <div>
@@ -236,7 +236,7 @@ export default function Login() {
 
                   <div className="flex items-center gap-3 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      portal === 'company' ? 'bg-blue-500' : portal === 'admin' ? 'bg-violet-500' : 'bg-amber-500'
+                      portal === 'company' ? 'gradient-orange' : portal === 'admin' ? 'bg-[var(--cr-900)]' : 'bg-[var(--cr-700)]'
                     }`}>
                       <span className="text-[9px] font-extrabold text-white font-mono">
                         {portal === 'company' ? 'APP' : portal === 'admin' ? 'ADM' : 'OFF'}

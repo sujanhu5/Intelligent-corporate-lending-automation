@@ -4,9 +4,10 @@ import ThemeToggle from '@/components/ui/ThemeToggle'
 import { PageLoader } from '@/components/ui/Spinner'
 
 const NAV_ITEMS = [
-  { path: '/portal', label: 'Dashboard', icon: '📊' },
-  { path: '/portal/applications', label: 'My Applications', icon: '📋' },
-  { path: '/portal/company', label: 'Company Profile', icon: '🏢' },
+  { path: '/portal', label: 'Dashboard' },
+  { path: '/portal/applications', label: 'My Applications' },
+  { path: '/portal/documents', label: 'Documents' },
+  { path: '/portal/company', label: 'Company Profile' },
 ]
 
 export default function CompanyLayout() {
@@ -42,7 +43,6 @@ export default function CompanyLayout() {
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
                     ${active ? 'bg-cr-50 text-primary' : 'text-ink-secondary hover:text-ink-primary hover:bg-surface-2'}`}
                 >
-                  <span className="mr-1.5">{item.icon}</span>
                   {item.label}
                 </Link>
               )

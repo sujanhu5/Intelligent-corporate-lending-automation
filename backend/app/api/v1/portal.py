@@ -224,6 +224,106 @@ def portal_dashboard(
 
 
 # ---------------------------------------------------------------------------
+# GET /portal/documents — list all documents across company's applications
+# ---------------------------------------------------------------------------
+
+@router.get("/documents", summary="List all documents for your company")
+def list_company_documents(
+    db: Session = Depends(get_db),
+    user: User = Depends(_require_company),
+) -> dict:
+    apps = (
+        db.query(Application)
+        .filter(Application.company_id == user.company_id)
+        .all()
+    )
+    app_ids = [a.id for a in apps]
+    app_map = {a.id: a.application_number for a in apps}
+
+    if not app_ids:
+        return {"documents": [], "total": 0}
+
+    docs = (
+        db.query(Document)
+        .filter(Document.application_id.in_(app_ids))
+        .order_by(Document.created_at.desc())
+        .all()
+    )
+
+    return {
+        "documents": [
+            {
+                "id": str(d.id),
+                "application_id": str(d.application_id),
+                "application_number": app_map.get(d.application_id, "—"),
+                "document_type": d.document_type.value if d.document_type else None,
+                "original_filename": d.original_filename,
+                "file_size_bytes": d.file_size_bytes,
+                "financial_year": d.financial_year,
+                "status": d.status.value if d.status else None,
+                "ocr_processed": d.ocr_processed or False,
+                "created_at": d.created_at.isoformat(),
+            }
+            for d in docs
+        ],
+        "total": len(docs),
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /portal/documents/upload/{application_id} — company uploads a doc
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/documents/upload/{application_id}",
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a document to your application",
+)
+async def portal_upload_document(
+    request: Request,
+    application_id: uuid.UUID,
+    file: UploadFile = File(...),
+    document_type: str = Form(...),
+    financial_year: Optional[str] = Form(default=None),
+    user: User = Depends(_require_company),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.document_service import DocumentService
+    from app.models.document import DocumentType as DT
+
+    app = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.company_id == user.company_id)
+        .first()
+    )
+    if not app:
+        raise NotFoundError(message="Application not found or does not belong to your company.")
+
+    try:
+        dt = DT(document_type)
+    except ValueError:
+        from app.core.exceptions import BadRequestError
+        raise BadRequestError(message=f"Invalid document type: {document_type}")
+
+    service = DocumentService(db)
+    result = await service.upload_document(
+        application_id=application_id,
+        document_type=dt,
+        file=file,
+        financial_year=financial_year,
+        uploaded_by=user,
+        ip_address=get_client_ip(request),
+        request_id=getattr(request.state, "request_id", "unknown"),
+    )
+    return {
+        "id": str(result.id),
+        "filename": result.original_filename,
+        "document_type": result.document_type,
+        "status": "uploaded",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
