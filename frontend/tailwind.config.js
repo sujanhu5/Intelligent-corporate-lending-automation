@@ -1,0 +1,82 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        cr: {
+          50:  'var(--cr-50)',
+          100: 'var(--cr-100)',
+          200: 'var(--cr-200)',
+          300: 'var(--cr-300)',
+          400: 'var(--cr-400)',
+          500: 'var(--cr-500)',
+          600: 'var(--cr-600)',
+          700: 'var(--cr-700)',
+          800: 'var(--cr-800)',
+          900: 'var(--cr-900)',
+        },
+        teal:    { 50: 'var(--teal-50)',    500: '#0D9488' },
+        success: { 50: 'var(--success-50)', 500: '#16A34A' },
+        warning: { 50: 'var(--warning-50)', 500: '#D97706' },
+        danger:  { 50: 'var(--danger-50)',  500: '#DC2626' },
+        canvas:   'var(--canvas)',
+        surface:  { 1: 'var(--surface-1)', 2: 'var(--surface-2)' },
+        border: {
+          subtle:  'var(--border-subtle)',
+          DEFAULT: 'var(--border-default)',
+        },
+        ink: {
+          muted:     'var(--text-muted)',
+          secondary: 'var(--text-secondary)',
+          primary:   'var(--text-primary)',
+          inverse:   'var(--text-inverse)',
+        },
+        primary: 'var(--primary)',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'monospace'],
+      },
+      borderRadius: {
+        hair: '0.8px',
+        xs:   '4px',
+        sm:   '7px',
+        DEFAULT: '8px',
+        md:   '12px',
+        lg:   '16px',
+        xl:   '20px',
+        '2xl':'26px',
+        full: '9999px',
+      },
+      boxShadow: {
+        hairline: 'var(--shadow-hairline)',
+        xs:  'var(--shadow-xs)',
+        sm:  'var(--shadow-sm)',
+        md:  'var(--shadow-md)',
+        lg:  'var(--shadow-lg)',
+        xl:  'var(--shadow-xl)',
+        orange: 'var(--shadow-orange)',
+      },
+      fontSize: {
+        'display': ['3.25rem',  { lineHeight: '1.05', fontWeight: '800', letterSpacing: '-0.03em' }],
+        'h1':      ['2.5rem',   { lineHeight: '1.1',  fontWeight: '800', letterSpacing: '-0.02em' }],
+        'h2':      ['1.875rem', { lineHeight: '1.15', fontWeight: '700', letterSpacing: '-0.015em' }],
+        'h3':      ['1.375rem', { lineHeight: '1.3',  fontWeight: '700', letterSpacing: '-0.01em' }],
+        'h4':      ['1.0625rem',{ lineHeight: '1.4',  fontWeight: '700' }],
+        'body':    ['0.9375rem',{ lineHeight: '1.6' }],
+        'small':   ['0.8125rem',{ lineHeight: '1.5' }],
+        'caption': ['0.6875rem',{ lineHeight: '1.4',  fontWeight: '700', letterSpacing: '0.08em' }],
+      },
+      keyframes: {
+        'fade-in': { from: { opacity: '0', transform: 'translateY(4px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        'spin': { to: { transform: 'rotate(360deg)' } },
+      },
+      animation: {
+        'fade-in': 'fade-in 0.2s ease-out',
+        'spin': 'spin 0.8s linear infinite',
+      },
+    },
+  },
+  plugins: [],
+}

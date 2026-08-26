@@ -1,0 +1,50 @@
+{
+  "dataset": {
+    "target_column": "Bankrupt?",
+    "min_rows": 100,
+    "max_missing_ratio": 0.50,
+    "constant_variance_threshold": 1e-8
+  },
+  "feature_selection": {
+    "top_k": 30,
+    "correlation_threshold": 0.95
+  },
+  "training": {
+    "handle_imbalance": true,
+    "smote_k_neighbors": 5
+  },
+  "models": {
+    "logistic_regression": {
+      "filename": "logistic.pkl",
+      "params": {
+        "max_iter": 1000,
+        "C": 1.0,
+        "solver": "lbfgs",
+        "class_weight": "balanced"
+      }
+    },
+    "random_forest": {
+      "filename": "random_forest.pkl",
+      "params": {
+        "n_estimators": 300,
+        "max_depth": 10,
+        "min_samples_leaf": 5,
+        "class_weight": "balanced",
+        "n_jobs": -1
+      }
+    },
+    "xgboost": {
+      "filename": "xgboost.pkl",
+      "params": {
+        "n_estimators": 300,
+        "max_depth": 6,
+        "learning_rate": 0.05,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "min_child_weight": 3,
+        "scale_pos_weight": 32,
+        "tree_method": "hist"
+      }
+    }
+  }
+}
