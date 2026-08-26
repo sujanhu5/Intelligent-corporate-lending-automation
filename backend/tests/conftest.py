@@ -14,7 +14,7 @@ os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql://postgres:password@localhost:5432/corporate_lending_test",
+    "postgresql://postgres:postgres@localhost:5432/corporate_lending_test",
 )
 
 from app.config import settings, BASE_DIR
@@ -84,7 +84,7 @@ def admin_user(db: Session):
 def auth_headers(client: TestClient, admin_user):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "test_admin@test.com", "password": "TestAdmin@1234"},
+        json={"email": "test_admin@test.com", "password": "TestAdmin@1234"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

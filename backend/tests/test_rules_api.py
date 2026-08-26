@@ -39,11 +39,15 @@ def test_list_rules(client, auth_headers, sample_rule):
 
 def test_toggle_rule(client, auth_headers, sample_rule):
     rid = sample_rule["id"]
-    response = client.post(f"/api/v1/rules/{rid}/toggle", headers=auth_headers)
+    response = client.patch(
+        f"/api/v1/rules/{rid}/toggle?is_active=false", headers=auth_headers
+    )
     assert response.status_code == 200
     assert response.json()["is_active"] is False
 
-    response = client.post(f"/api/v1/rules/{rid}/toggle", headers=auth_headers)
+    response = client.patch(
+        f"/api/v1/rules/{rid}/toggle?is_active=true", headers=auth_headers
+    )
     assert response.status_code == 200
     assert response.json()["is_active"] is True
 

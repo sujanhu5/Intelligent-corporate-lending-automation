@@ -150,6 +150,25 @@ def _error_envelope(
 # Exception handlers — register on the FastAPI app
 # =============================================================================
 
+def _sanitize_errors(errors: list) -> list:
+    """Convert any bytes values in validation errors to strings for JSON serialization."""
+    sanitized = []
+    for err in errors:
+        clean = {}
+        for k, v in err.items():
+            if isinstance(v, bytes):
+                clean[k] = v.decode("utf-8", errors="replace")
+            elif isinstance(v, dict):
+                clean[k] = {
+                    dk: dv.decode("utf-8", errors="replace") if isinstance(dv, bytes) else dv
+                    for dk, dv in v.items()
+                }
+            else:
+                clean[k] = v
+        sanitized.append(clean)
+    return sanitized
+
+
 def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AppException)
@@ -163,13 +182,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def validation_exception_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        errors = _sanitize_errors(exc.errors())
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=_error_envelope(
                 "VALIDATION_ERROR",
                 "Request validation failed.",
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
-                exc.errors(),
+                errors,
             ),
         )
 

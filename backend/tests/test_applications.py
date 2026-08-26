@@ -10,11 +10,14 @@ def company_for_app(client, auth_headers):
         json={
             "name": "App Test Company",
             "registration_number": "APP-TEST-001",
+            "company_type": "private_limited",
+            "industry": "technology",
             "contact_email": "app@test.com",
             "registered_address": "789 App Street",
         },
         headers=auth_headers,
     )
+    assert response.status_code in (200, 201), response.text
     return response.json()
 
 
@@ -30,7 +33,7 @@ def sample_application(client, auth_headers, company_for_app):
         },
         headers=auth_headers,
     )
-    assert response.status_code in (200, 201)
+    assert response.status_code in (200, 201), response.text
     return response.json()
 
 

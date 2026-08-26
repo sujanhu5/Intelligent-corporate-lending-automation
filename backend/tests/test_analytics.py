@@ -8,7 +8,7 @@ def test_summary(client, auth_headers):
     assert response.status_code == 200
     data = response.json()
     assert "total_applications" in data
-    assert "total_companies" in data
+    assert "total_approved" in data
 
 
 def test_trends(client, auth_headers):
@@ -51,7 +51,8 @@ def test_pipeline_metrics(client, auth_headers):
     response = client.get("/api/v1/analytics/pipeline-metrics", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
-    assert "total_runs" in data
+    assert "stage_completion" in data
+    assert "stage_conversion" in data
 
 
 def test_analytics_unauthenticated(client):

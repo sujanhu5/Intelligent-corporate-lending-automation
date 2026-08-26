@@ -6,7 +6,7 @@ import pytest
 def test_login_success(client, admin_user):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "test_admin@test.com", "password": "TestAdmin@1234"},
+        json={"email": "test_admin@test.com", "password": "TestAdmin@1234"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -17,7 +17,7 @@ def test_login_success(client, admin_user):
 def test_login_wrong_password(client, admin_user):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "test_admin@test.com", "password": "WrongPassword"},
+        json={"email": "test_admin@test.com", "password": "WrongPassword"},
     )
     assert response.status_code == 401
 
@@ -25,7 +25,7 @@ def test_login_wrong_password(client, admin_user):
 def test_login_nonexistent_user(client):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "nobody@test.com", "password": "anything"},
+        json={"email": "nobody@test.com", "password": "anything"},
     )
     assert response.status_code == 401
 
@@ -57,7 +57,7 @@ def test_change_password(client, auth_headers):
 
     login_resp = client.post(
         "/api/v1/auth/login",
-        data={"username": "test_admin@test.com", "password": "NewPassword@5678"},
+        json={"email": "test_admin@test.com", "password": "NewPassword@5678"},
     )
     assert login_resp.status_code == 200
 
