@@ -1,6 +1,6 @@
 {
-  "trained_at": "2026-08-26T09:49:40.441839+00:00",
-  "dataset_path": "..\\datasets\\company_bankruptcy_prediction.csv",
+  "trained_at": "2026-08-26T10:08:37.255872+00:00",
+  "dataset_path": "D:\\PROJECT\\Coorporate_lending_automation\\datasets\\company_bankruptcy_prediction.csv",
   "total_samples": 6819,
   "train_samples": 5455,
   "test_samples": 1364,

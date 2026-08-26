@@ -51,6 +51,24 @@ const ACTIONS = [
   { value: 'flag',          label: 'Flag only' },
 ]
 
+const INDUSTRIES = [
+  { value: '',               label: 'All Industries (Global)' },
+  { value: 'manufacturing',  label: 'Manufacturing' },
+  { value: 'retail',         label: 'Retail' },
+  { value: 'wholesale',      label: 'Wholesale' },
+  { value: 'services',       label: 'Services' },
+  { value: 'technology',     label: 'Technology' },
+  { value: 'healthcare',     label: 'Healthcare' },
+  { value: 'construction',   label: 'Construction' },
+  { value: 'real_estate',    label: 'Real Estate' },
+  { value: 'agriculture',    label: 'Agriculture' },
+  { value: 'financial',      label: 'Financial Services' },
+  { value: 'hospitality',    label: 'Hospitality' },
+  { value: 'transportation', label: 'Transportation' },
+  { value: 'energy',         label: 'Energy' },
+  { value: 'other',          label: 'Other' },
+]
+
 const MANDATORY_OPS = ['lt','lte','gt','gte','eq','neq']
 
 export default function RuleEngine() {
@@ -87,11 +105,13 @@ export default function RuleEngine() {
       name: r.name, description: r.description ?? '', metric_field: r.metric_field,
       operator: r.operator, threshold: r.threshold ?? undefined, action: r.action,
       is_mandatory: r.is_mandatory, category: r.category, priority: r.priority,
+      industry: r.industry ?? undefined,
     })
     setModalOpen(true)
   }
 
   const onSubmit = async (values: RuleCreate) => {
+    if (!values.industry) values.industry = null
     setSaving(true)
     try {
       if (editTarget) {
@@ -167,7 +187,7 @@ export default function RuleEngine() {
               <table className="w-full border-collapse text-small">
                 <thead className="bg-surface-2">
                   <tr>
-                    {['Rule Name', 'Field', 'Condition', 'Category', 'Priority', 'Status', ''].map(h => (
+                    {['Rule Name', 'Field', 'Condition', 'Category', 'Industry', 'Priority', 'Status', ''].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-caption text-ink-secondary border-b border-border font-bold uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -182,6 +202,7 @@ export default function RuleEngine() {
                         {r.threshold != null && <span className="font-mono ml-1">{r.threshold}</span>}
                       </td>
                       <td className="px-4 py-3">{r.category}</td>
+                      <td className="px-4 py-3 text-xs text-ink-secondary capitalize">{r.industry?.replace(/_/g, ' ') ?? 'All'}</td>
                       <td className="px-4 py-3 tabular text-right">{r.priority}</td>
                       <td className="px-4 py-3">
                         <Badge variant={r.is_active ? 'approved' : 'draft'} dot>
@@ -252,6 +273,9 @@ export default function RuleEngine() {
               error={errors.action?.message}
               {...register('action', { required: 'Required.' })} />
           </div>
+
+          <Select label="Industry Scope" options={INDUSTRIES} placeholder="All Industries"
+            {...register('industry')} />
 
           <Input label="Priority (lower = first)" type="number"
             defaultValue={10} {...register('priority', { valueAsNumber: true })} />

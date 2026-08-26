@@ -27,7 +27,9 @@ from app.models.audit_log import AuditAction
 from app.models.user import User, UserRole, UserStatus
 from app.repositories.audit_repository import AuditLogRepository
 from app.repositories.user_repository import UserRepository
-from app.schemas.auth import LoginRequest, PasswordChangeRequest, TokenResponse, TokenUserPayload
+from app.models.company import Company, CompanyStatus, CompanyType, Industry
+from app.repositories.company_repository import CompanyRepository
+from app.schemas.auth import CompanyRegisterRequest, LoginRequest, PasswordChangeRequest, TokenResponse, TokenUserPayload
 from app.schemas.user import UserCreate
 
 logger = get_logger(__name__)
@@ -37,6 +39,7 @@ class AuthService:
     def __init__(self, db: Session) -> None:
         self._db = db
         self._user_repo = UserRepository(db)
+        self._company_repo = CompanyRepository(db)
         self._audit_repo = AuditLogRepository(db)
 
     # -------------------------------------------------------------------------
@@ -107,6 +110,97 @@ class AuthService:
         )
 
         logger.info("User logged in", extra={"user_id": str(user.id), "email": user.email})
+
+        return TokenResponse(
+            access_token=token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=TokenUserPayload.model_validate(user),
+        )
+
+    # -------------------------------------------------------------------------
+    # Company self-registration (public)
+    # -------------------------------------------------------------------------
+
+    def register_company(
+        self,
+        request: CompanyRegisterRequest,
+        ip_address: str = "unknown",
+        user_agent: str = "unknown",
+        request_id: str = "unknown",
+    ) -> TokenResponse:
+        if self._user_repo.exists_by_email(request.email):
+            raise ConflictError(
+                message=f"An account with email '{request.email}' already exists."
+            )
+        if self._company_repo.exists_by_registration_number(request.registration_number):
+            raise ConflictError(
+                message=f"A company with registration number '{request.registration_number}' is already registered."
+            )
+
+        company = self._company_repo.create(
+            name=request.company_name.strip(),
+            registration_number=request.registration_number.strip().upper(),
+            company_type=CompanyType(request.company_type),
+            industry=Industry(request.industry),
+            status=CompanyStatus.UNDER_REVIEW,
+            incorporation_date=request.incorporation_date,
+            registered_address=request.registered_address,
+            city=request.city,
+            state=request.state,
+            postal_code=request.postal_code,
+            contact_email=request.email,
+            contact_phone=request.contact_phone,
+            website=request.website,
+            annual_turnover=request.annual_turnover,
+            number_of_employees=request.number_of_employees,
+        )
+
+        hashed = hash_password(request.password)
+        user = self._user_repo.create(
+            email=request.email,
+            full_name=request.full_name,
+            hashed_password=hashed,
+            role=UserRole.COMPANY,
+            department=None,
+            phone=request.contact_phone,
+            is_verified=True,
+        )
+        user.company_id = company.id
+        self._db.flush()
+
+        token = create_access_token(
+            subject=str(user.id),
+            extra_claims={
+                "email": user.email,
+                "role": user.role.value,
+                "name": user.full_name,
+            },
+        )
+
+        now_str = datetime.now(timezone.utc).isoformat()
+        self._user_repo.update_last_login(user, now_str)
+
+        self._audit_repo.log(
+            action=AuditAction.USER_CREATED,
+            description=f"Company '{company.name}' self-registered by {user.email}.",
+            user_id=user.id,
+            entity_type="company",
+            entity_id=str(company.id),
+            new_values={
+                "company_name": company.name,
+                "registration_number": company.registration_number,
+                "industry": company.industry.value,
+            },
+            ip_address=ip_address,
+            user_agent=user_agent,
+            request_id=request_id,
+        )
+
+        logger.info(
+            "Company self-registered",
+            extra={"company_id": str(company.id), "user_id": str(user.id)},
+        )
 
         return TokenResponse(
             access_token=token,

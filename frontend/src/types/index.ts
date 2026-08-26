@@ -1,5 +1,5 @@
 // ─── Auth ────────────────────────────────────────────────────────────────────
-export type UserRole = 'admin' | 'officer' | 'analyst' | 'viewer'
+export type UserRole = 'admin' | 'officer' | 'analyst' | 'viewer' | 'company'
 export type UserStatus = 'active' | 'inactive' | 'suspended'
 
 export interface User {
@@ -12,6 +12,7 @@ export interface User {
   phone: string | null
   is_verified: boolean
   last_login: string | null
+  company_id: string | null
   created_at: string
   updated_at: string
 }
@@ -262,6 +263,7 @@ export interface Rule {
   priority: number
   failure_message: string | null
   pass_message: string | null
+  industry: Industry | null
   extra_config: Record<string, unknown> | null
   created_at: string
   updated_at: string
@@ -279,6 +281,7 @@ export interface RuleCreate {
   priority?: number
   failure_message?: string
   pass_message?: string
+  industry?: Industry | null
 }
 
 export interface RuleResultItem {

@@ -77,9 +77,11 @@ def require_roles(*roles: UserRole):
     return _check
 
 
-require_admin   = require_roles(UserRole.ADMIN)
-require_officer = require_roles(UserRole.ADMIN, UserRole.OFFICER)
-require_analyst = require_roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.ANALYST)
+require_admin      = require_roles(UserRole.ADMIN)
+require_officer    = require_roles(UserRole.ADMIN, UserRole.OFFICER)
+require_analyst    = require_roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.ANALYST)
+require_bank_staff = require_roles(UserRole.ADMIN, UserRole.OFFICER, UserRole.ANALYST, UserRole.VIEWER)
+require_company    = require_roles(UserRole.COMPANY)
 
 
 # ---------------------------------------------------------------------------

@@ -99,6 +99,7 @@ class UserResponse(BaseModel):
     is_verified: bool
     last_login: Optional[str]
     profile_notes: Optional[str]
+    company_id: Optional[uuid.UUID] = None
     created_at: datetime
     updated_at: datetime
 

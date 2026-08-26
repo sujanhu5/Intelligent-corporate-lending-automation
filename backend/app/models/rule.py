@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base, PgEnum
+from app.models.company import Industry
 
 
 class RuleCategory(str, enum.Enum):
@@ -81,6 +82,12 @@ class Rule(Base):
     # Human-readable failure message shown in the report
     failure_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     pass_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Sector scope — if set, the rule only applies to applications from this industry
+    industry: Mapped[Optional[Industry]] = mapped_column(
+        PgEnum(Industry, name="industry"),
+        nullable=True,
+    )
 
     # Extra configuration (e.g. minimum years in business for qualitative rules)
     extra_config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)

@@ -12,6 +12,7 @@ from app.database.connection import get_db
 from app.dependencies import get_current_user, get_client_ip
 from app.models.user import User
 from app.schemas.auth import (
+    CompanyRegisterRequest,
     LoginRequest,
     MessageResponse,
     PasswordChangeRequest,
@@ -21,6 +22,30 @@ from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# POST /auth/register  (company self-registration — public)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new company and create its admin account",
+)
+def register_company(
+    request: Request,
+    body: CompanyRegisterRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    service = AuthService(db)
+    return service.register_company(
+        request=body,
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("user-agent", "unknown"),
+        request_id=getattr(request.state, "request_id", "unknown"),
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -43,6 +43,44 @@ class PasswordChangeRequest(BaseModel):
     model_config = {"str_strip_whitespace": True}
 
 
+class CompanyRegisterRequest(BaseModel):
+    """Self-registration: creates a Company + a User (role=COMPANY) in one step."""
+    # Company fields
+    company_name: str
+    registration_number: str
+    company_type: str = "private_limited"
+    industry: str
+    incorporation_date: Optional[str] = None
+    registered_address: str
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    contact_phone: Optional[str] = None
+    website: Optional[str] = None
+    annual_turnover: Optional[float] = None
+    number_of_employees: Optional[int] = None
+
+    # User account fields
+    full_name: str
+    email: EmailStr
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, v: str) -> str:
+        return validate_password_strength(v)
+
+    @field_validator("company_name", "full_name")
+    @classmethod
+    def non_empty(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("Must be at least 2 characters.")
+        return v
+
+    model_config = {"str_strip_whitespace": True}
+
+
 class PasswordResetRequest(BaseModel):
     email: EmailStr
 

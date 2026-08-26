@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.company import Industry
 from app.models.rule import Operator, RuleAction, RuleCategory
 
 
@@ -30,6 +31,7 @@ class RuleCreate(BaseModel):
     priority: int = Field(default=100, ge=1, le=9999)
     failure_message: Optional[str] = Field(default=None, max_length=1000)
     pass_message: Optional[str] = Field(default=None, max_length=1000)
+    industry: Optional[Industry] = None
     extra_config: Optional[Dict[str, Any]] = None
 
     @field_validator("threshold")
@@ -60,6 +62,7 @@ class RuleUpdate(BaseModel):
     priority: Optional[int] = Field(default=None, ge=1, le=9999)
     failure_message: Optional[str] = Field(default=None, max_length=1000)
     pass_message: Optional[str] = Field(default=None, max_length=1000)
+    industry: Optional[Industry] = None
     extra_config: Optional[Dict[str, Any]] = None
 
 
@@ -77,6 +80,7 @@ class RuleResponse(BaseModel):
     priority: int
     failure_message: Optional[str]
     pass_message: Optional[str]
+    industry: Optional[Industry] = None
     extra_config: Optional[Dict[str, Any]]
     created_at: datetime
     updated_at: datetime

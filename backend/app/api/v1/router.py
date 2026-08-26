@@ -19,6 +19,7 @@ from app.api.v1 import (
     reports,
     analytics,
     pipeline,
+    portal,
 )
 
 api_router = APIRouter()
@@ -35,3 +36,4 @@ api_router.include_router(predictions.router,  prefix="/predictions",  tags=["ML
 api_router.include_router(reports.router,      prefix="/reports",      tags=["Reports"])
 api_router.include_router(analytics.router,    prefix="/analytics",    tags=["Analytics"])
 api_router.include_router(pipeline.router,     prefix="/pipeline",     tags=["Pipeline"])
+api_router.include_router(portal.router,      prefix="/portal",       tags=["Company Portal"])

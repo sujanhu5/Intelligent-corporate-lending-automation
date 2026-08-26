@@ -6,13 +6,15 @@ import enum
 import uuid
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, String, Text
+from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, PgEnum
 
 if TYPE_CHECKING:
     from app.models.audit_log import AuditLog
+    from app.models.company import Company
 
 
 class UserRole(str, enum.Enum):
@@ -20,6 +22,7 @@ class UserRole(str, enum.Enum):
     ANALYST = "analyst"
     OFFICER = "officer"
     VIEWER = "viewer"
+    COMPANY = "company"
 
 
 class UserStatus(str, enum.Enum):
@@ -50,7 +53,17 @@ class User(Base):
     last_login: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     profile_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id"),
+        nullable=True,
+        index=True,
+    )
+
     # Relationships
+    company: Mapped[Optional["Company"]] = relationship(
+        "Company", foreign_keys=[company_id], lazy="joined",
+    )
     audit_logs: Mapped[List["AuditLog"]] = relationship(
         "AuditLog", back_populates="user", lazy="dynamic"
     )
