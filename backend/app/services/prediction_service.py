@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, settings
 from app.core.exceptions import BadRequestError, ModelNotTrainedError, NotFoundError
 from app.core.logging import get_logger
-from app.models.application import ApplicationStatus
+from app.models.application import ApplicationStatus, FinalDecision
 from app.models.audit_log import AuditAction
 from app.models.financial_ratio import FinancialRatio
 from app.models.prediction import ModelUsed, Prediction, PredictionOutcome, RiskLevel
@@ -308,13 +308,16 @@ class PredictionService:
             model_metrics=model_metrics_all,
         )
 
-        # ── 11. Update application ────────────────────────────────────────────
+        # ── 11. Update application + derive automatic final decision ─────────
         self._app_repo.update(app, risk_score=risk_score)
         self._app_repo.mark_pipeline_stage(app, "ml_predicted")
 
-        # Update status only if not already in manual_review or rejected
-        if app.status not in (ApplicationStatus.REJECTED, ApplicationStatus.MANUAL_REVIEW):
-            self._app_repo.update(app, status=ApplicationStatus.ML_PREDICTED)
+        final_decision = _derive_final_decision(rule_outcome, risk_level_str)
+        self._app_repo.update_decision(
+            app,
+            decision=final_decision,
+            reason=recommendation,
+        )
 
         # ── 12. Audit log ─────────────────────────────────────────────────────
         self._write_audit(
@@ -432,3 +435,25 @@ def _key_to_model_used(key: str) -> ModelUsed:
         "xgboost": ModelUsed.XGBOOST,
     }
     return mapping.get(key, ModelUsed.XGBOOST)
+
+
+def _derive_final_decision(rule_outcome: str, risk_level: str) -> FinalDecision:
+    """
+    Turn the composite risk level (and any advisory rule flags) into a final,
+    automatic accept/reject/manual-review decision — no officer action required.
+
+    Mandatory rule rejection is handled earlier (before ML even runs) and is
+    not represented here. Once ML has run, the decision mirrors the same
+    bands used in ml.risk_scorer.build_recommendation():
+      - very_high risk                       → REJECTED
+      - high or medium risk                  → MANUAL_REVIEW
+      - advisory rule(s) triggered           → MANUAL_REVIEW (even if risk is low)
+      - low or very_low risk, no advisories  → APPROVED
+    """
+    if risk_level == "very_high":
+        return FinalDecision.REJECTED
+    if risk_level in ("high", "medium"):
+        return FinalDecision.MANUAL_REVIEW
+    if rule_outcome == "manual_review":
+        return FinalDecision.MANUAL_REVIEW
+    return FinalDecision.APPROVED

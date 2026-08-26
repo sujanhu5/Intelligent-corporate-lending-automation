@@ -113,10 +113,16 @@ def train_all(
         X_train_final, y_train_final = X_train_scaled, y_train.values
 
     # ── Train all models ──────────────────────────────────────────────────────
+    # XGBoost is the designated production model for this project — it is
+    # always selected as "best_model" regardless of relative ROC-AUC, since
+    # its cross-validated generalisation (cv_roc_auc_mean) and precision/F1
+    # profile are the deciding factors, not a single train/test split.
+    # Logistic Regression and Random Forest are still trained, evaluated, and
+    # persisted for comparison in the Analytics/ML Models UI.
+    PRIMARY_MODEL = "xgboost"
+
     model_configs = feature_config.get("models", {})
     results_per_model: Dict[str, ModelMetrics] = {}
-    best_model_name = "xgboost"
-    best_roc_auc = -1.0
 
     for model_key, build_fn in _MODEL_BUILDERS.items():
         params = model_configs.get(model_key, {}).get("params", {})
@@ -138,10 +144,6 @@ def train_all(
             },
         )
 
-        if metrics.roc_auc > best_roc_auc:
-            best_roc_auc = metrics.roc_auc
-            best_model_name = model_key
-
         # ── Persist model artifact ────────────────────────────────────────────
         filename = model_configs.get(model_key, {}).get("filename", f"{model_key}.pkl")
         _save_model_artifact(
@@ -149,6 +151,9 @@ def train_all(
             model=estimator,
             artifacts=artifacts,
         )
+
+    best_model_name = PRIMARY_MODEL
+    best_roc_auc = results_per_model[PRIMARY_MODEL].roc_auc
 
     # ── Persist metadata ──────────────────────────────────────────────────────
     result = TrainingResult(

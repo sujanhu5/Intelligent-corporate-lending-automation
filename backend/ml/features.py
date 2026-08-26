@@ -115,8 +115,8 @@ def apply_smote(
         from imblearn.over_sampling import SMOTE
         smote = SMOTE(random_state=random_state)
         X_res, y_res = smote.fit_resample(X_train, y_train)
-        before = dict(zip(*np.unique(y_train, return_counts=True)))
-        after = dict(zip(*np.unique(y_res, return_counts=True)))
+        before = {str(k): int(v) for k, v in zip(*np.unique(y_train, return_counts=True))}
+        after = {str(k): int(v) for k, v in zip(*np.unique(y_res, return_counts=True))}
         logger.info("SMOTE applied", extra={"before": before, "after": after})
         return X_res, y_res
     except ImportError:

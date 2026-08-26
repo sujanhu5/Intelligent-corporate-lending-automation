@@ -1,6 +1,6 @@
 {
-  "trained_at": "2026-08-12T17:57:14.985678+00:00",
-  "dataset_path": "D:\\PROJECT\\Coorporate_lending_automation\\datasets\\company_bankruptcy_prediction.csv",
+  "trained_at": "2026-08-26T09:49:40.441839+00:00",
+  "dataset_path": "..\\datasets\\company_bankruptcy_prediction.csv",
   "total_samples": 6819,
   "train_samples": 5455,
   "test_samples": 1364,
@@ -42,8 +42,8 @@
     "After-tax Net Profit Growth Rate"
   ],
   "dropped_correlated_count": 18,
-  "best_model": "random_forest",
-  "best_roc_auc": 0.9494834710743801,
+  "best_model": "xgboost",
+  "best_roc_auc": 0.9139290633608814,
   "models": {
     "logistic_regression": {
       "accuracy": 0.886364,
@@ -55,22 +55,22 @@
       "cv_roc_auc_std": 0.003931
     },
     "random_forest": {
-      "accuracy": 0.943548,
-      "precision": 0.322581,
-      "recall": 0.681818,
-      "f1": 0.437956,
-      "roc_auc": 0.949483,
-      "cv_roc_auc_mean": 0.99615,
-      "cv_roc_auc_std": 0.001153
+      "accuracy": 0.934751,
+      "precision": 0.300885,
+      "recall": 0.772727,
+      "f1": 0.433121,
+      "roc_auc": 0.944697,
+      "cv_roc_auc_mean": 0.991543,
+      "cv_roc_auc_std": 0.002031
     },
     "xgboost": {
-      "accuracy": 0.951613,
-      "precision": 0.3625,
-      "recall": 0.659091,
-      "f1": 0.467742,
-      "roc_auc": 0.937156,
-      "cv_roc_auc_mean": 0.997226,
-      "cv_roc_auc_std": 0.001097
+      "accuracy": 0.917889,
+      "precision": 0.253623,
+      "recall": 0.795455,
+      "f1": 0.384615,
+      "roc_auc": 0.913929,
+      "cv_roc_auc_mean": 0.996454,
+      "cv_roc_auc_std": 0.001192
     }
   },
   "mi_scores": {

@@ -14,7 +14,7 @@ os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/corporate_lending_test",
+    "postgresql://postgres:sujan@localhost:5432/corporate_lending_test",
 )
 
 from app.config import settings, BASE_DIR
