@@ -8,6 +8,7 @@ const DOC_TYPES = [
   { value: 'balance_sheet', label: 'Balance Sheet' },
   { value: 'profit_loss', label: 'Profit & Loss Statement' },
   { value: 'cash_flow', label: 'Cash Flow Statement' },
+  { value: 'annual_report', label: 'Annual Report (Auto-detect)' },
   { value: 'auditor_report', label: 'Auditor Report' },
   { value: 'gst_report', label: 'GST Report' },
   { value: 'bank_statement', label: 'Bank Statement' },

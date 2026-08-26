@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { path: '/portal', label: 'Dashboard' },
   { path: '/portal/applications', label: 'My Applications' },
   { path: '/portal/documents', label: 'Documents' },
+  { path: '/portal/annual-report', label: 'Annual Report' },
   { path: '/portal/company', label: 'Company Profile' },
 ]
 

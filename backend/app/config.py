@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     TESSERACT_CMD: str = "tesseract"
     TESSERACT_LANG: str = "eng"
     OCR_DPI: int = 300
-    MAX_FILE_SIZE_MB: int = 50
+    MAX_FILE_SIZE_MB: int = 100
 
     # -------------------------------------------------------------------------
     # Machine Learning

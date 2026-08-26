@@ -62,10 +62,16 @@ class OCRService:
         """
         Run OCR extraction on a single document synchronously.
         Idempotent — re-running overwrites any existing OCRData for the document.
+        Annual reports are delegated to AnnualReportService for section-aware extraction.
         """
         doc = self._doc_repo.get_by_id(document_id)
         if not doc:
             raise NotFoundError(message=f"Document '{document_id}' not found.")
+
+        # Annual reports need section-aware extraction
+        from app.models.document import DocumentType as DT
+        if doc.document_type == DT.ANNUAL_REPORT:
+            return self._extract_annual_report(doc, triggered_by, ip_address, request_id)
 
         # Mark as processing
         self._doc_repo.update_status(doc, DocumentStatus.PROCESSING)
@@ -158,6 +164,29 @@ class OCRService:
         )
 
         return self._build_result_response(ocr_record, doc)
+
+    # -------------------------------------------------------------------------
+    # Annual report extraction
+    # -------------------------------------------------------------------------
+
+    def _extract_annual_report(
+        self,
+        doc,
+        triggered_by: User,
+        ip_address: str,
+        request_id: str,
+    ) -> OCRResultResponse:
+        """Delegate annual report processing to AnnualReportService."""
+        from app.services.annual_report_service import AnnualReportService
+        ar_service = AnnualReportService(self._db)
+        ar_service.process_annual_report(
+            document_id=doc.id,
+            triggered_by=triggered_by,
+            ip_address=ip_address,
+            request_id=request_id,
+        )
+        self._db.expire(doc)
+        return self._build_result_response(doc.ocr_data, doc)
 
     # -------------------------------------------------------------------------
     # Pipeline stage advancement

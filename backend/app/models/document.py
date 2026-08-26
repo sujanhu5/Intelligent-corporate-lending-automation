@@ -6,7 +6,7 @@ import enum
 import uuid
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import BigInteger, ForeignKey, String, Text
+from sqlalchemy import BigInteger, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,6 +24,7 @@ class DocumentType(str, enum.Enum):
     AUDITOR_REPORT = "auditor_report"
     GST_REPORT = "gst_report"
     BANK_STATEMENT = "bank_statement"
+    ANNUAL_REPORT = "annual_report"
     OTHER = "other"
 
 
@@ -64,6 +65,16 @@ class Document(Base):
     financial_year: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     processing_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Annual report section tracking: sub-documents extracted from an annual report
+    parent_document_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    page_range_start: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    page_range_end: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     # Relationships
     application: Mapped["Application"] = relationship(

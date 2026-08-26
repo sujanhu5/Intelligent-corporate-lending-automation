@@ -324,6 +324,150 @@ async def portal_upload_document(
 
 
 # ---------------------------------------------------------------------------
+# POST /portal/annual-report/upload/{application_id}
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/annual-report/upload/{application_id}",
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a complete annual report for automatic section detection",
+)
+async def portal_upload_annual_report(
+    request: Request,
+    application_id: uuid.UUID,
+    file: UploadFile = File(...),
+    financial_year: Optional[str] = Form(default=None),
+    user: User = Depends(_require_company),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.document_service import DocumentService
+    from app.models.document import DocumentType as DT
+
+    app = (
+        db.query(Application)
+        .filter(Application.id == application_id, Application.company_id == user.company_id)
+        .first()
+    )
+    if not app:
+        raise NotFoundError(message="Application not found or does not belong to your company.")
+
+    service = DocumentService(db)
+    result = await service.upload_document(
+        application_id=application_id,
+        document_type=DT.ANNUAL_REPORT,
+        file=file,
+        financial_year=financial_year,
+        uploaded_by=user,
+        ip_address=get_client_ip(request),
+        request_id=getattr(request.state, "request_id", "unknown"),
+    )
+
+    return {
+        "id": str(result.id),
+        "filename": result.original_filename,
+        "document_type": "annual_report",
+        "status": "uploaded",
+        "message": "Annual report uploaded. Use the analyze endpoint to detect financial statements.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /portal/annual-report/analyze/{document_id}
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/annual-report/analyze/{document_id}",
+    summary="Analyze an uploaded annual report to detect and extract financial statements",
+)
+def portal_analyze_annual_report(
+    request: Request,
+    document_id: uuid.UUID,
+    user: User = Depends(_require_company),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.annual_report_service import AnnualReportService
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise NotFoundError(message="Document not found.")
+
+    # Verify the document belongs to one of the user's applications
+    app = (
+        db.query(Application)
+        .filter(Application.id == doc.application_id, Application.company_id == user.company_id)
+        .first()
+    )
+    if not app:
+        raise NotFoundError(message="Document does not belong to your company.")
+
+    service = AnnualReportService(db)
+    result = service.process_annual_report(
+        document_id=document_id,
+        triggered_by=user,
+        ip_address=get_client_ip(request),
+        request_id=getattr(request.state, "request_id", "unknown"),
+    )
+    db.commit()
+
+    return {
+        "document_id": result.parent_document_id,
+        "total_pages": result.total_pages,
+        "sections_detected": result.sections_detected,
+        "analysis_method": result.analysis_method,
+        "company_name": result.company_name,
+        "financial_year": result.financial_year,
+        "unit_context": result.unit_context,
+        "overall_confidence": result.overall_confidence,
+        "has_all_statements": result.has_all_statements,
+        "total_fields_extracted": result.total_fields_extracted,
+        "warnings": result.warnings,
+        "sections": [
+            {
+                "section_type": s.section_type,
+                "document_id": s.document_id,
+                "page_range": s.page_range,
+                "fields_extracted": s.fields_extracted,
+                "confidence": s.confidence,
+                "title_found": s.title_found,
+                "variant": s.variant,
+            }
+            for s in result.sections_processed
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# GET /portal/annual-report/status/{document_id}
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/annual-report/status/{document_id}",
+    summary="Get analysis status and detected sections for an annual report",
+)
+def portal_annual_report_status(
+    document_id: uuid.UUID,
+    user: User = Depends(_require_company),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.annual_report_service import AnnualReportService
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise NotFoundError(message="Document not found.")
+
+    app = (
+        db.query(Application)
+        .filter(Application.id == doc.application_id, Application.company_id == user.company_id)
+        .first()
+    )
+    if not app:
+        raise NotFoundError(message="Document does not belong to your company.")
+
+    service = AnnualReportService(db)
+    return service.get_analysis_status(document_id)
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
