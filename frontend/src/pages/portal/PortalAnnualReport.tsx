@@ -95,15 +95,19 @@ export default function PortalAnnualReport() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
   const [reportStatus, setReportStatus] = useState<ReportStatus | null>(null)
   const [previousReports, setPreviousReports] = useState<any[]>([])
+  const [creatingApp, setCreatingApp] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const { success, error } = useToast()
 
-  useEffect(() => {
+  const loadApplications = () => {
+    setLoading(true)
     portalApi.applications(1, 100).then(data => {
       setApplications(data.items.map((a: any) => ({ id: a.id, application_number: a.application_number })))
       if (data.items.length > 0) setApplicationId(data.items[0].id)
     }).finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadApplications() }, [])
 
   useEffect(() => {
     // Load previous annual report documents
@@ -230,9 +234,32 @@ export default function PortalAnnualReport() {
           <h2 className="text-sm font-bold text-ink-primary font-mono mb-4">Upload Annual Report</h2>
 
           {applications.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-sm text-ink-secondary">No applications found. An annual report must be uploaded against a loan application.</p>
-              <p className="text-xs text-ink-muted mt-1">Contact the bank to have an application created for your company.</p>
+            <div className="text-center py-8">
+              <div className="w-14 h-14 rounded-xl gradient-orange flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-ink-primary mb-1">No loan application yet</p>
+              <p className="text-xs text-ink-secondary mb-4">Create a loan application first, then upload your annual report.</p>
+              <button
+                onClick={async () => {
+                  setCreatingApp(true)
+                  try {
+                    const result = await portalApi.createApplication()
+                    success(`Application ${result.application_number} created.`)
+                    loadApplications()
+                  } catch (err) {
+                    error(extractError(err))
+                  } finally {
+                    setCreatingApp(false)
+                  }
+                }}
+                disabled={creatingApp}
+                className="btn btn-primary"
+              >
+                {creatingApp ? 'Creating...' : 'Create Loan Application'}
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-4">

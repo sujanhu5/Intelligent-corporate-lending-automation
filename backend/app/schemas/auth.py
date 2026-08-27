@@ -96,6 +96,7 @@ class TokenUserPayload(BaseModel):
     full_name: str
     role: str
     status: str
+    company_id: Optional[uuid.UUID] = None
 
     model_config = {"from_attributes": True}
 

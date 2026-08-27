@@ -16,6 +16,11 @@ export const portalApi = {
   documents: () =>
     client.get('/portal/documents').then(r => r.data),
 
+  createApplication: (loanAmount = 1000000, loanPurpose = 'working_capital', tenureMonths = 12) =>
+    client.post('/portal/applications', null, {
+      params: { loan_amount: loanAmount, loan_purpose: loanPurpose, loan_tenure_months: tenureMonths },
+    }).then(r => r.data),
+
   uploadDocument: (applicationId: string, file: File, documentType: string, financialYear?: string) => {
     const form = new FormData()
     form.append('file', file)

@@ -224,6 +224,55 @@ def portal_dashboard(
 
 
 # ---------------------------------------------------------------------------
+# POST /portal/applications — company creates a loan application
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/applications",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new loan application for your company",
+)
+def create_company_application(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(_require_company),
+    loan_amount: float = 1000000,
+    loan_purpose: str = "working_capital",
+    loan_tenure_months: int = 12,
+) -> dict:
+    from app.models.application import ApplicationStatus, LoanPurpose, FinalDecision
+    import datetime
+
+    try:
+        purpose = LoanPurpose(loan_purpose)
+    except ValueError:
+        purpose = LoanPurpose.WORKING_CAPITAL
+
+    count = db.query(Application).count()
+    app_number = f"CLA_{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}_{count + 1:05d}"
+
+    app = Application(
+        application_number=app_number,
+        company_id=user.company_id,
+        loan_amount_requested=loan_amount,
+        loan_purpose=purpose,
+        loan_tenure_months=loan_tenure_months,
+        status=ApplicationStatus.SUBMITTED,
+        final_decision=FinalDecision.PENDING,
+    )
+    db.add(app)
+    db.commit()
+    db.refresh(app)
+
+    return {
+        "id": str(app.id),
+        "application_number": app.application_number,
+        "status": app.status.value,
+        "message": "Application created successfully.",
+    }
+
+
+# ---------------------------------------------------------------------------
 # GET /portal/documents — list all documents across company's applications
 # ---------------------------------------------------------------------------
 
