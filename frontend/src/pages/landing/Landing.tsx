@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { useAuthStore } from '@/store/auth'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 
 function Logo() {
@@ -50,12 +49,6 @@ const FEATURES = [
 const STAGES = ['Submit', 'OCR', 'Ratios', 'Rules', 'ML', 'Report', 'Decision']
 
 export default function Landing() {
-  const { user } = useAuthStore()
-
-  const signInLink = user
-    ? { to: user.role === 'company' ? '/portal' : '/dashboard', label: 'Go to Dashboard' }
-    : { to: '/login', label: 'Sign In' }
-
   return (
     <div className="min-h-screen bg-canvas text-ink-primary">
       {/* Nav */}
@@ -69,8 +62,8 @@ export default function Landing() {
           </nav>
           <div className="flex items-center gap-3">
             <ThemeToggle variant="switch" />
-            <Link to={signInLink.to} className="btn btn-secondary btn-sm">{signInLink.label}</Link>
-            {!user && <Link to="/register" className="btn btn-primary btn-sm">Apply for Loan</Link>}
+            <Link to="/login" className="btn btn-secondary btn-sm">Sign In</Link>
+            <Link to="/register" className="btn btn-primary btn-sm">Apply for Loan</Link>
           </div>
         </div>
       </header>
@@ -87,8 +80,8 @@ export default function Landing() {
             to final credit decision. Upload your financial statements and get an assessment.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {!user && <Link to="/register" className="btn btn-primary btn-lg">Apply for a Loan</Link>}
-            <Link to={signInLink.to} className="btn btn-secondary btn-lg">{user ? 'Go to Dashboard' : 'Sign In'}</Link>
+            <Link to="/register" className="btn btn-primary btn-lg">Apply for a Loan</Link>
+            <Link to="/login" className="btn btn-secondary btn-lg">Sign In</Link>
             <a href="#pipeline" className="btn btn-secondary btn-lg">See the Pipeline</a>
           </div>
         </div>
@@ -166,11 +159,9 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        {!user && (
-          <div className="text-center mt-8">
-            <Link to="/register" className="btn btn-primary btn-lg">Register Your Company</Link>
-          </div>
-        )}
+        <div className="text-center mt-8">
+          <Link to="/register" className="btn btn-primary btn-lg">Register Your Company</Link>
+        </div>
       </section>
 
       {/* CTA */}
@@ -180,13 +171,11 @@ export default function Landing() {
             Ready to get started?
           </h2>
           <p className="mt-4 text-ink-secondary max-w-lg mx-auto">
-            {user
-              ? 'Head to your dashboard to manage applications.'
-              : 'Register your company and apply for a corporate loan, or sign in if you already have an account.'}
+            Register your company and apply for a corporate loan, or sign in if you already have an account.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {!user && <Link to="/register" className="btn btn-primary btn-lg">Apply for a Loan</Link>}
-            <Link to={signInLink.to} className="btn btn-secondary btn-lg">{signInLink.label}</Link>
+            <Link to="/register" className="btn btn-primary btn-lg">Apply for a Loan</Link>
+            <Link to="/login" className="btn btn-secondary btn-lg">Sign In</Link>
           </div>
         </div>
       </section>
@@ -200,8 +189,8 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-4 text-[11px] font-mono text-ink-secondary">
             <a href="#platform" className="hover:text-primary transition-colors">Platform</a>
-            <Link to={signInLink.to} className="hover:text-primary transition-colors">Sign in</Link>
-            {!user && <Link to="/register" className="hover:text-primary transition-colors">Register</Link>}
+            <Link to="/login" className="hover:text-primary transition-colors">Sign in</Link>
+            <Link to="/register" className="hover:text-primary transition-colors">Register</Link>
           </div>
         </div>
       </footer>

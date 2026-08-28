@@ -24,4 +24,7 @@ export const usersApi = {
 
   adminResetPassword: (id: string, new_password: string) =>
     client.post(`/users/${id}/reset-password`, { new_password }).then(r => r.data),
+
+  updateMe: (data: Partial<{ email: string; full_name: string; department: string; phone: string }>) =>
+    client.patch<User>('/users/me', data).then(r => r.data),
 }

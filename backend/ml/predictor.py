@@ -59,6 +59,33 @@ RATIO_TO_DATASET_FEATURE: Dict[str, str] = {
     "current_asset_ratio":        "Current Assets/Total Assets",
 }
 
+# Clean, human-readable display names for our own financial ratios. These are
+# what appear in the SHAP table and the credit report — never the raw foreign
+# dataset column names — so every explanation reflects the applicant's own
+# genuine metrics.
+RATIO_DISPLAY_NAMES: Dict[str, str] = {
+    "current_ratio":              "Current Ratio",
+    "quick_ratio":                "Quick Ratio",
+    "debt_equity_ratio":          "Debt-to-Equity Ratio",
+    "debt_ratio":                 "Debt Ratio",
+    "return_on_assets":           "Return on Assets",
+    "return_on_equity":           "Return on Equity",
+    "interest_coverage_ratio":    "Interest Coverage Ratio",
+    "asset_turnover":             "Asset Turnover",
+    "inventory_turnover":         "Inventory Turnover",
+    "receivable_turnover":        "Receivable Turnover",
+    "cash_flow_ratio":            "Cash Flow Ratio",
+    "operating_cash_flow_ratio":  "Operating Cash Flow Ratio",
+    "gross_profit_margin":        "Gross Profit Margin",
+    "operating_margin":           "Operating Margin",
+    "net_profit_margin":          "Net Profit Margin",
+    "ebitda_margin":              "EBITDA Margin",
+    "financial_leverage":         "Financial Leverage",
+    "debt_service_coverage_ratio":"Debt Service Coverage Ratio",
+    "working_capital":            "Working Capital to Total Assets",
+    "current_asset_ratio":        "Current Asset Ratio",
+}
+
 # Cache: model_key → loaded artifact dict
 _model_cache: Dict[str, Dict[str, Any]] = {}
 
@@ -123,12 +150,9 @@ def predict_for_application(
     )
 
     # ── Build and scale feature vector ───────────────────────────────────────
-    X_scaled = build_prediction_vector(ratio_values, fa, RATIO_TO_DATASET_FEATURE)
-
-    # Track what we sent in (unscaled for logging/display)
-    input_features_display: Dict[str, float] = {
-        fname: float(X_scaled[0, i]) for i, fname in enumerate(feature_names)
-    }
+    X_scaled, populated = build_prediction_vector(
+        ratio_values, fa, RATIO_TO_DATASET_FEATURE
+    )
 
     # ── Predict probability ───────────────────────────────────────────────────
     if hasattr(model, "predict_proba"):
@@ -140,13 +164,38 @@ def predict_for_application(
 
     prob = max(0.0, min(1.0, prob))
 
-    # ── SHAP explanation ──────────────────────────────────────────────────────
-    shap_dict, importance_dict = _compute_shap(model, X_scaled, feature_names, model_key)
-    top_shap = dict(
-        sorted(shap_dict.items(), key=lambda kv: abs(kv[1]), reverse=True)[:top_shap_features]
-    )
+    # ── SHAP explanation (over the raw dataset features) ──────────────────────
+    shap_dict, _ = _compute_shap(model, X_scaled, feature_names, model_key)
 
-    # ── Natural-language explanation ──────────────────────────────────────────
+    # ── Restrict + relabel to the applicant's GENUINE ratios ──────────────────
+    # Only surface SHAP for features that were populated from real company data
+    # and label them with our clean ratio names. Median-filled dataset columns
+    # (identical for every applicant) are dropped so the explanation is truly
+    # specific to this company rather than the same generic list every time.
+    genuine_shap: Dict[str, float] = {}
+    genuine_inputs: Dict[str, float] = {}
+    for dataset_feature, ratio_name in populated.items():
+        display = RATIO_DISPLAY_NAMES.get(ratio_name, ratio_name.replace("_", " ").title())
+        sval = shap_dict.get(dataset_feature, 0.0)
+        # If two ratios collide on one dataset feature, keep the larger |SHAP|.
+        if display not in genuine_shap or abs(sval) > abs(genuine_shap[display]):
+            genuine_shap[display] = sval
+            rv = ratio_values.get(ratio_name)
+            genuine_inputs[display] = float(rv) if rv is not None and np.isfinite(rv) else 0.0
+
+    # Fallback: if nothing mapped (e.g. no ratios available), degrade gracefully
+    # to the humanised raw features so the report is never blank.
+    if not genuine_shap:
+        genuine_shap = {
+            _humanise(f): v for f, v in shap_dict.items()
+        }
+
+    top_shap = dict(
+        sorted(genuine_shap.items(), key=lambda kv: abs(kv[1]), reverse=True)[:top_shap_features]
+    )
+    importance_dict = {k: abs(v) for k, v in top_shap.items()}
+
+    # ── Natural-language explanation (uses the genuine ratio names) ───────────
     explanation = _build_explanation(prob, top_shap, model_key)
 
     logger.info(
@@ -154,6 +203,7 @@ def predict_for_application(
         extra={
             "model": model_key,
             "prob_of_default": round(prob, 4),
+            "genuine_features": len(populated),
             "top_driver": next(iter(top_shap), "N/A"),
         },
     )
@@ -161,10 +211,8 @@ def predict_for_application(
     return PredictionBundle(
         probability_of_default=prob,
         shap_values=top_shap,
-        feature_importance=dict(
-            sorted(importance_dict.items(), key=lambda kv: kv[1], reverse=True)[:top_shap_features]
-        ),
-        input_features=input_features_display,
+        feature_importance=importance_dict,
+        input_features=genuine_inputs,
         explanation_text=explanation,
         model_key=model_key,
     )
@@ -276,9 +324,11 @@ def _build_explanation(
             "suggesting acceptable credit risk."
         )
 
-    # Identify top positive drivers (pushing toward default) and negative drivers
+    # Keys are already clean, applicant-specific ratio names. Positive SHAP
+    # pushes toward default (higher risk); negative SHAP reduces it.
     positive_drivers = [
-        k for k, v in top_shap.items() if v > 0.01
+        k for k, v in sorted(top_shap.items(), key=lambda kv: kv[1], reverse=True)
+        if v > 0.01
     ][:3]
     negative_drivers = [
         k for k, v in sorted(top_shap.items(), key=lambda kv: kv[1])
@@ -288,18 +338,16 @@ def _build_explanation(
     parts = [risk_sentence]
 
     if positive_drivers:
-        driver_str = ", ".join(
-            f"'{_humanise(f)}'" for f in positive_drivers
-        )
-        parts.append(
-            f"Key factors increasing default risk: {driver_str}."
-        )
+        driver_str = ", ".join(f"'{f}'" for f in positive_drivers)
+        parts.append(f"Key factors increasing default risk: {driver_str}.")
     if negative_drivers:
-        driver_str = ", ".join(
-            f"'{_humanise(f)}'" for f in negative_drivers
-        )
+        driver_str = ", ".join(f"'{f}'" for f in negative_drivers)
+        parts.append(f"Mitigating factors reducing default risk: {driver_str}.")
+
+    if not positive_drivers and not negative_drivers:
         parts.append(
-            f"Mitigating factors reducing default risk: {driver_str}."
+            "No single financial ratio dominates the assessment — the outcome "
+            "reflects the combined effect of the applicant's overall profile."
         )
 
     return " ".join(parts)

@@ -310,7 +310,7 @@ def list_company_documents(
                 "file_size_bytes": d.file_size_bytes,
                 "financial_year": d.financial_year,
                 "status": d.status.value if d.status else None,
-                "ocr_processed": d.ocr_processed or False,
+                "ocr_processed": d.ocr_data is not None,
                 "created_at": d.created_at.isoformat(),
             }
             for d in docs
@@ -365,7 +365,7 @@ async def portal_upload_document(
         request_id=getattr(request.state, "request_id", "unknown"),
     )
     return {
-        "id": str(result.id),
+        "id": str(result.document_id),
         "filename": result.original_filename,
         "document_type": result.document_type,
         "status": "uploaded",
@@ -412,7 +412,7 @@ async def portal_upload_annual_report(
     )
 
     return {
-        "id": str(result.id),
+        "id": str(result.document_id),
         "filename": result.original_filename,
         "document_type": "annual_report",
         "status": "uploaded",

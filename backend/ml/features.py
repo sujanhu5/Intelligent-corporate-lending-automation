@@ -131,7 +131,7 @@ def build_prediction_vector(
     ratio_values: Dict[str, Optional[float]],
     feature_artifacts: FeatureArtifacts,
     ratio_to_feature_map: Dict[str, str],
-) -> np.ndarray:
+) -> Tuple[np.ndarray, Dict[str, str]]:
     """
     Build and scale a single-sample feature vector for prediction.
 
@@ -141,17 +141,29 @@ def build_prediction_vector(
       3. Apply the fitted scaler.
 
     Returns:
-        Scaled feature vector, shape (1, n_selected_features).
+        (scaled_vector, populated)
+          scaled_vector: shape (1, n_selected_features).
+          populated:     {dataset_feature: ratio_name} for the features that
+                         received a GENUINE company value (not a median
+                         fallback). This lets the caller restrict SHAP output
+                         to the metrics the company actually provided, instead
+                         of surfacing median-filled dataset columns that are
+                         identical for every applicant.
     """
     # Start with medians
     vector: Dict[str, float] = dict(feature_artifacts.feature_medians)
+    selected = set(feature_artifacts.selected_features)
 
-    # Override mapped features with actual computed ratio values
+    # Override mapped features with actual computed ratio values, and record
+    # which selected features were genuinely populated from company data.
+    populated: Dict[str, str] = {}
     for ratio_name, dataset_feature in ratio_to_feature_map.items():
         if dataset_feature in vector:
             val = ratio_values.get(ratio_name)
             if val is not None and np.isfinite(val):
                 vector[dataset_feature] = float(val)
+                if dataset_feature in selected:
+                    populated[dataset_feature] = ratio_name
 
     # Build array in the exact order of selected_features
     arr = np.array(
@@ -159,7 +171,7 @@ def build_prediction_vector(
         dtype=np.float64,
     ).reshape(1, -1)
 
-    return feature_artifacts.scaler.transform(arr)
+    return feature_artifacts.scaler.transform(arr), populated
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ from app.core.exceptions import (
 from app.core.logging import get_logger
 from app.models.audit_log import AuditAction
 from app.models.document import Document, DocumentStatus, DocumentType
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.repositories.application_repository import ApplicationRepository
 from app.repositories.audit_repository import AuditLogRepository
 from app.repositories.document_repository import DocumentRepository
@@ -285,8 +285,9 @@ class DocumentService:
     ) -> None:
         doc = self.get_by_id(doc_id)
 
-        # Cannot delete a document that has been OCR-processed
-        if doc.status in (DocumentStatus.EXTRACTED,):
+        # Admins can force-delete at any status; other roles are blocked once
+        # the document has been OCR-processed to avoid invalidating analysis.
+        if doc.status == DocumentStatus.EXTRACTED and deleted_by.role != UserRole.ADMIN:
             raise BadRequestError(
                 message=(
                     f"Document '{doc.original_filename}' has already been OCR-extracted. "
@@ -294,6 +295,16 @@ class DocumentService:
                     f"If you need to replace it, upload a new version instead."
                 )
             )
+
+        # When an admin removes an annual report, cascade-delete its
+        # auto-generated sub-documents (BS / P&L / CF section extracts) first
+        # via raw SQL so DB-level CASCADE handles the OCR data.
+        from sqlalchemy import text as _text
+        self._db.execute(
+            _text("DELETE FROM documents WHERE parent_document_id = :pid"),
+            {"pid": str(doc.id)},
+        )
+        self._db.flush()
 
         file_path = doc.file_path
         app_id = str(doc.application_id)
@@ -313,7 +324,14 @@ class DocumentService:
             request_id=request_id,
         )
 
-        self._doc_repo.delete(doc)
+        # Raw SQL DELETE so DB-level CASCADE handles ocr_data and any other
+        # child rows; the ORM would otherwise try to nullify their FKs first.
+        self._db.expunge(doc)
+        self._db.execute(
+            _text("DELETE FROM documents WHERE id = :did"),
+            {"did": str(doc_id)},
+        )
+        self._db.commit()
 
         # Remove physical file after DB record is gone
         deleted = delete_upload_file(file_path)
@@ -345,6 +363,8 @@ def _normalise_mime(content_type: str, ext: str) -> str:
             ".tif":  "image/tiff",
             ".tiff": "image/tiff",
             ".bmp":  "image/bmp",
+            ".txt":  "text/plain",
+            ".csv":  "text/csv",
         }
         return _ext_map.get(ext.lower(), content_type)
     return content_type.strip().lower()

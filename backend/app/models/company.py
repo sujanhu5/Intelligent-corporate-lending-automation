@@ -45,6 +45,23 @@ class Industry(str, enum.Enum):
     HOSPITALITY = "hospitality"
     TRANSPORTATION = "transportation"
     ENERGY = "energy"
+    # Added in migration b3d5f2c7e910 — banking, insurance, and other
+    # commonly-requested corporate lending sectors.
+    BANKING = "banking"
+    INSURANCE = "insurance"
+    PHARMACEUTICALS = "pharmaceuticals"
+    EDUCATION = "education"
+    TELECOMMUNICATIONS = "telecommunications"
+    AUTOMOTIVE = "automotive"
+    FOOD_BEVERAGE = "food_beverage"
+    MEDIA_ENTERTAINMENT = "media_entertainment"
+    MINING = "mining"
+    LOGISTICS = "logistics"
+    CHEMICALS = "chemicals"
+    TEXTILES = "textiles"
+    CONSULTING = "consulting"
+    E_COMMERCE = "e_commerce"
+    RENEWABLE_ENERGY = "renewable_energy"
     OTHER = "other"
 
 

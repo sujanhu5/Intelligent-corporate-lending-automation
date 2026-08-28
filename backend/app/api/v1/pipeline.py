@@ -125,3 +125,51 @@ def run_batch_pipeline(
         ip_address=ip,
         request_id=request_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /pipeline/reset-stage/{application_id}
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/reset-stage/{application_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Reset a pipeline stage and all downstream stages",
+    description=(
+        "Resets the specified stage and all stages after it, allowing "
+        "re-execution. Useful for re-running OCR after uploading new documents, "
+        "recalculating ratios, or re-evaluating rules."
+    ),
+)
+def reset_pipeline_stage(
+    application_id: uuid.UUID,
+    stage: str = Query(..., description="Stage to reset: ocr, ratios, rules, ml, report"),
+    current_user: User = Depends(require_analyst),
+    db: Session = Depends(get_db),
+) -> dict:
+    stage_map = {
+        "ocr": "ocr_completed",
+        "ratios": "ratios_calculated",
+        "rules": "rules_evaluated",
+        "ml": "ml_predicted",
+        "report": "report_generated",
+    }
+    if stage not in stage_map:
+        from app.core.exceptions import BadRequestError
+        raise BadRequestError(message=f"Invalid stage: {stage}. Valid: {', '.join(stage_map.keys())}")
+
+    from app.repositories.application_repository import ApplicationRepository
+    app_repo = ApplicationRepository(db)
+    app = app_repo.get_by_id(application_id)
+    if not app:
+        from app.core.exceptions import NotFoundError
+        raise NotFoundError(message=f"Application '{application_id}' not found.")
+
+    app_repo.reset_pipeline_from(app, stage_map[stage])
+    db.commit()
+
+    return {
+        "application_id": str(application_id),
+        "reset_from": stage,
+        "message": f"Pipeline reset from '{stage}' stage. You can now re-run this and all subsequent stages.",
+    }

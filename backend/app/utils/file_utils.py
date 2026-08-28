@@ -24,9 +24,14 @@ ALLOWED_MIME_TYPES: Set[str] = {
     "image/jpg",
     "image/tiff",
     "image/bmp",
+    "text/plain",
+    "text/csv",
 }
 
-ALLOWED_EXTENSIONS: Set[str] = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
+ALLOWED_EXTENSIONS: Set[str] = {
+    ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp",
+    ".txt", ".csv",
+}
 
 
 def validate_file_type(filename: str, content_type: str) -> None:

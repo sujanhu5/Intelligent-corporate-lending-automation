@@ -90,10 +90,12 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
+  const isAdmin = user?.role === 'admin'
+
   useEffect(() => {
-    Promise.all([
+    const fetches: Promise<any>[] = [
       applicationsApi.dashboardStats(),
-      predictionsApi.modelStatus(),
+      isAdmin ? predictionsApi.modelStatus() : Promise.resolve(null),
       analyticsApi.summary(),
       analyticsApi.trends(30),
       analyticsApi.riskDistribution(),
@@ -101,7 +103,8 @@ export default function Dashboard() {
       analyticsApi.loanPurposeBreakdown(),
       analyticsApi.pipelineFunnel(),
       analyticsApi.pipelineMetrics(),
-    ])
+    ]
+    Promise.all(fetches)
       .then(([s, m, sum, t, r, ind, purp, f, pm]) => {
         setStats(s); setModelStatus(m); setSummary(sum)
         setTrends(t); setRiskDist(r); setIndustryData(ind)
@@ -114,8 +117,12 @@ export default function Dashboard() {
 
   const approvalRate = stats?.total ? Math.round((stats.approved / stats.total) * 100) : 0
   const rejectionRate = stats?.total ? Math.round((stats.rejected / stats.total) * 100) : 0
-  const systemHealth = modelStatus?.models_trained ? 'Operational' : 'Models Not Trained'
-  const healthSeverity: 'good' | 'warn' | 'critical' = modelStatus?.models_trained ? 'good' : 'warn'
+  const systemHealth = isAdmin
+    ? (modelStatus?.models_trained ? 'Operational' : 'Models Not Trained')
+    : 'Online'
+  const healthSeverity: 'good' | 'warn' | 'critical' = isAdmin
+    ? (modelStatus?.models_trained ? 'good' : 'warn')
+    : 'good'
 
   const pieData = stats ? [
     { name: 'Approved', value: stats.approved },
@@ -130,12 +137,12 @@ export default function Dashboard() {
   return (
     <div>
       <PageHeader
-        title="Command Center"
-        subtitle={`Welcome back, ${user?.full_name ?? 'Administrator'}. Here's your real-time system overview.`}
-        eyebrow={user?.role === 'admin' ? 'System Administrator' : 'Bank Staff'}
+        title={user?.role === 'admin' ? 'Admin Command Center' : 'Officer Dashboard'}
+        subtitle={`Welcome back, ${user?.full_name ?? 'User'}. ${user?.role === 'admin' ? "Here's your real-time system overview." : "Here's your application overview."}`}
+        eyebrow={user?.role === 'admin' ? 'System Administrator' : 'Loan Officer'}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => navigate('/analytics')}>Analytics</Button>
+            {user?.role === 'admin' && <Button variant="secondary" size="sm" onClick={() => navigate('/analytics')}>Analytics</Button>}
             <Button onClick={() => navigate('/applications/new')}>+ New Application</Button>
           </div>
         }
@@ -234,12 +241,28 @@ export default function Dashboard() {
 
         <ChartCard title="Decision Distribution">
           {pieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={230}>
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} innerRadius={42} paddingAngle={2} stroke="none">
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%" cy="50%"
+                  outerRadius={82}
+                  innerRadius={46}
+                  paddingAngle={3}
+                  stroke="var(--surface-1)"
+                  strokeWidth={2}
+                  animationDuration={900}
+                  label={({ percent }) => percent && percent > 0.06 ? `${(percent * 100).toFixed(0)}%` : ''}
+                  labelLine={false}
+                >
                   {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => [v, 'Applications']} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 11, boxShadow: '0 6px 18px -8px rgba(0,0,0,0.25)' }}
+                  formatter={(v: number) => [v, 'Applications']}
+                />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: 10 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -253,20 +276,25 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <ChartCard title="Risk Score Distribution" subtitle="ML-predicted risk levels">
           {riskDist.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={riskDist} margin={{ left: -20 }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={riskDist} margin={{ top: 14, left: -14, right: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--border-subtle)" strokeOpacity={0.5} vertical={false} />
                 <XAxis
                   dataKey="risk_level"
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: 'var(--ink-muted)' }}
                   tickFormatter={r => r.replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  tickLine={false}
+                  axisLine={{ stroke: 'var(--border-subtle)' }}
                 />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--ink-muted)' }} tickLine={false} axisLine={false} width={28} />
                 <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 11, boxShadow: '0 6px 18px -8px rgba(0,0,0,0.25)' }}
+                  cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }}
                   formatter={(v: number, _: unknown, entry: { payload: RiskDistribution }) => [
                     `${v} (${entry.payload.percentage.toFixed(1)}%)`, 'Applications',
                   ]}
                 />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={800}>
                   {riskDist.map((d, i) => (
                     <Cell key={i} fill={RISK_COLORS[d.risk_level] ?? '#888'} />
                   ))}
@@ -342,16 +370,26 @@ export default function Dashboard() {
 
         <ChartCard title="Loan Purpose Analysis" subtitle="Breakdown by purpose">
           {purposeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={purposeData.map(d => ({
                 name: d.purpose.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
                 'Approval Rate': +(d.approval_rate * 100).toFixed(1),
                 Applications: d.count,
-              }))} margin={{ left: -20 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-15} textAnchor="end" height={50} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid var(--border-subtle)' }} />
-                <Bar dataKey="Applications" fill="var(--cr-400)" radius={[4, 4, 0, 0]} />
+              }))} margin={{ top: 10, left: -14, right: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradPurpose" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor="var(--cr-500)" stopOpacity={1} />
+                    <stop offset="100%" stopColor="var(--cr-500)" stopOpacity={0.55} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--border-subtle)" strokeOpacity={0.5} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: 'var(--ink-muted)' }} angle={-15} textAnchor="end" height={60} tickLine={false} axisLine={{ stroke: 'var(--border-subtle)' }} />
+                <YAxis tick={{ fontSize: 10, fill: 'var(--ink-muted)' }} tickLine={false} axisLine={false} width={28} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 11, boxShadow: '0 6px 18px -8px rgba(0,0,0,0.25)' }}
+                  cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }}
+                />
+                <Bar dataKey="Applications" fill="url(#gradPurpose)" radius={[6, 6, 0, 0]} animationDuration={800} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -360,8 +398,8 @@ export default function Dashboard() {
         </ChartCard>
       </div>
 
-      {/* Row 4: Pipeline Metrics + Automation Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+      {/* Row 4: Pipeline Metrics + Automation Status (admin only) */}
+      {isAdmin && <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <ChartCard title="Pipeline Stage Metrics" subtitle="Completion rates by stage">
           {pipelineMetrics && Object.keys(pipelineMetrics.stage_completion).length > 0 ? (
             <div className="flex flex-col gap-3">
@@ -447,16 +485,16 @@ export default function Dashboard() {
             </div>
           </div>
         </ChartCard>
-      </div>
+      </div>}
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
+        {([
           { label: 'Companies', desc: 'Manage registered companies', icon: '🏢', path: '/companies' },
           { label: 'Applications', desc: 'Review loan applications', icon: '📋', path: '/applications' },
-          { label: 'Rule Engine', desc: 'Configure credit rules', icon: '⚙', path: '/rules' },
+          isAdmin ? { label: 'Rule Engine', desc: 'Configure credit rules', icon: '⚙', path: '/rules' } : null,
           { label: 'Pipeline', desc: 'Run assessment pipeline', icon: '▤', path: '/pipeline' },
-        ].map(item => (
+        ].filter(Boolean) as { label: string; desc: string; icon: string; path: string }[]).map(item => (
           <div
             key={item.label}
             onClick={() => navigate(item.path)}

@@ -15,4 +15,7 @@ export const companiesApi = {
 
   deactivate: (id: string) =>
     client.delete<Company>(`/companies/${id}`).then(r => r.data),
+
+  permanentDelete: (id: string) =>
+    client.delete(`/companies/${id}/permanent`).then(r => r.data),
 }

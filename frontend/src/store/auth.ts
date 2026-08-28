@@ -10,6 +10,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   initialize: () => Promise<void>
+  setUser: (user: User) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -23,7 +24,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const data = await authApi.login(email, password)
       localStorage.setItem('access_token', data.access_token)
-      set({ user: data.user, token: data.access_token, loading: false })
+      // initialized: true guards against a slower, stale initialize() call
+      // (kicked off on app mount with a leftover token) resolving afterwards
+      // and clobbering this fresh login — see the token-freshness check below.
+      set({ user: data.user, token: data.access_token, loading: false, initialized: true })
     } catch (err) {
       set({ loading: false })
       throw err
@@ -36,15 +40,24 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null, token: null })
   },
 
+  setUser: (user) => set({ user }),
+
   initialize: async () => {
     const token = localStorage.getItem('access_token')
     if (!token) { set({ initialized: true }); return }
     try {
       const user = await authApi.me()
-      set({ user, token, initialized: true })
+      // Only apply the result if this is still the active token — a newer
+      // login() may have replaced it while this request was in flight.
+      if (localStorage.getItem('access_token') === token) {
+        set({ user, token, initialized: true })
+      }
     } catch {
-      localStorage.removeItem('access_token')
-      set({ user: null, token: null, initialized: true })
+      // Same guard: don't log out a session that has since logged in fresh.
+      if (localStorage.getItem('access_token') === token) {
+        localStorage.removeItem('access_token')
+        set({ user: null, token: null, initialized: true })
+      }
     }
   },
 }))

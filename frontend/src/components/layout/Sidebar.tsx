@@ -13,9 +13,9 @@ const NAV: NavItem[] = [
   { href: '/dashboard',    label: 'Dashboard',    icon: '◧' },
   { href: '/applications', label: 'Applications', icon: '▦' },
   { href: '/companies',    label: 'Companies',    icon: '⬢' },
-  { href: '/rules',        label: 'Rule Engine',  icon: '⚙', roles: ['admin', 'officer'] },
-  { href: '/predictions',  label: 'ML Models',    icon: '◈', roles: ['admin', 'officer', 'analyst'] },
-  { href: '/analytics',    label: 'Analytics',    icon: '▤' },
+  { href: '/rules',        label: 'Rule Engine',  icon: '⚙', roles: ['admin'] },
+  { href: '/predictions',  label: 'ML Models',    icon: '◈', roles: ['admin'] },
+  { href: '/analytics',    label: 'Analytics',    icon: '▤', roles: ['admin', 'analyst'] },
   { href: '/pipeline',     label: 'Pipeline',     icon: '⟐', roles: ['admin', 'officer', 'analyst'] },
   { href: '/settings',     label: 'Settings',     icon: '⛭', roles: ['admin'] },
 ]

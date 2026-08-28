@@ -34,6 +34,19 @@ if settings.TESSERACT_CMD and settings.TESSERACT_CMD != "tesseract":
 
 # Tesseract config: OEM 3 (LSTM neural net), PSM 6 (uniform block of text)
 _TESS_CONFIG = "--oem 3 --psm 6"
+# Fallback PSM modes tried when the primary config yields low-confidence
+# output. PSM 4 = single column of variable-sized text (financial statements),
+# PSM 11 = sparse text, no assumptions (blurry / broken layouts),
+# PSM 3 = fully automatic page segmentation.
+_TESS_FALLBACK_CONFIGS = (
+    "--oem 3 --psm 4",
+    "--oem 3 --psm 11",
+    "--oem 3 --psm 3",
+)
+# Trigger the fallback sweep when the primary result's mean confidence is
+# below this threshold OR the extracted text is suspiciously short.
+_TESS_LOW_CONFIDENCE = 55.0
+_TESS_MIN_CHARS_ON_PAGE = 40
 
 # Text length threshold below which a PDF is treated as scanned
 _DIGITAL_PDF_MIN_CHARS = 100
@@ -81,6 +94,8 @@ def extract_text(file_path: str | Path) -> ExtractionResult:
             result = _extract_pdf(path)
         elif ext in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}:
             result = _extract_image(path)
+        elif ext in {".txt", ".csv"}:
+            result = _extract_text_file(path)
         else:
             raise OCRError(message=f"Unsupported file type: '{ext}'")
     except OCRError:
@@ -204,6 +219,34 @@ def _scanned_pdf_extract(
 
 
 # ---------------------------------------------------------------------------
+# Plain-text file pipeline (.txt / .csv)
+# ---------------------------------------------------------------------------
+
+def _extract_text_file(path: Path) -> ExtractionResult:
+    """
+    Read a plain-text or CSV file directly. Skips OCR entirely — the text
+    is already digital. Tries UTF-8, falls back to latin-1, then binary.
+    """
+    raw_bytes = path.read_bytes()
+    for encoding in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
+        try:
+            text = raw_bytes.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        text = raw_bytes.decode("utf-8", errors="replace")
+
+    return ExtractionResult(
+        raw_text=text,
+        page_results=[PageResult(page_number=1, text=text, confidence=100.0)],
+        page_count=1,
+        mean_confidence=100.0,
+        extraction_method="text_file",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Image pipeline
 # ---------------------------------------------------------------------------
 
@@ -252,23 +295,43 @@ def _tesseract_on_pil(pil_img: Image.Image, page_num: int) -> tuple[str, float]:
         logger.warning("Preprocessing failed for page %d: %s — using raw image", page_num, exc)
         pil_preprocessed = pil_img
 
-    try:
-        # image_to_data gives word-level confidence
+    def _run(config: str) -> tuple[str, float]:
         data = pytesseract.image_to_data(
             pil_preprocessed,
             lang=settings.TESSERACT_LANG,
-            config=_TESS_CONFIG,
+            config=config,
             output_type=pytesseract.Output.DICT,
         )
         text = pytesseract.image_to_string(
             pil_preprocessed,
             lang=settings.TESSERACT_LANG,
-            config=_TESS_CONFIG,
+            config=config,
         )
-        # Mean confidence of words with confidence ≥ 0
         confs = [int(c) for c in data["conf"] if int(c) >= 0]
-        mean_conf = sum(confs) / len(confs) if confs else 0.0
-        return text, round(mean_conf, 2)
+        mean = sum(confs) / len(confs) if confs else 0.0
+        return text, round(mean, 2)
+
+    try:
+        best_text, best_conf = _run(_TESS_CONFIG)
+
+        # If the primary pass looks weak, sweep additional PSM modes and
+        # keep whichever produces the highest-confidence result. This is
+        # what recovers text from blurry, low-contrast, or oddly-laid-out
+        # pages that the default block-of-text segmentation misses.
+        if best_conf < _TESS_LOW_CONFIDENCE or len(best_text.strip()) < _TESS_MIN_CHARS_ON_PAGE:
+            for cfg in _TESS_FALLBACK_CONFIGS:
+                try:
+                    alt_text, alt_conf = _run(cfg)
+                except Exception as exc:
+                    logger.debug("Tesseract fallback %s failed: %s", cfg, exc)
+                    continue
+                # Prefer higher confidence; on a tie prefer the longer text.
+                if (alt_conf > best_conf) or (
+                    alt_conf == best_conf and len(alt_text) > len(best_text)
+                ):
+                    best_text, best_conf = alt_text, alt_conf
+
+        return best_text, best_conf
     except Exception as exc:
         logger.warning("Tesseract failed on page %d: %s", page_num, exc)
         return "", 0.0

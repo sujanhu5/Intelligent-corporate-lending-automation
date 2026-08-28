@@ -14,7 +14,7 @@ from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedEr
 from app.core.logging import get_logger
 from app.models.audit_log import AuditAction
 from app.models.company import Company, CompanyStatus, CompanyType, Industry
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.repositories.audit_repository import AuditLogRepository
 from app.repositories.company_repository import CompanyRepository
 from app.schemas.company import (
@@ -203,3 +203,69 @@ class CompanyService:
             request_id=request_id,
         )
         return company
+
+    # -------------------------------------------------------------------------
+    # Hard delete (admin only — removes company + all related data)
+    # -------------------------------------------------------------------------
+
+    def hard_delete_company(
+        self,
+        company_id: uuid.UUID,
+        deleted_by: User,
+        ip_address: str = "unknown",
+        request_id: str = "unknown",
+    ) -> str:
+        """
+        Permanently delete a company along with all applications, documents,
+        OCR data, ratios, predictions, and reports.
+
+        Executes raw SQL deletes so the DB-level ON DELETE CASCADE runs and
+        the ORM's default "nullify FK" behavior is bypassed. Company users are
+        detached (company_id -> NULL) and deactivated.
+        """
+        from sqlalchemy import text
+
+        company = self.get_by_id(company_id)
+        company_name = company.name
+
+        # Detach any company users first so they are not deleted with the company
+        self._db.execute(
+            text(
+                "UPDATE users SET company_id = NULL, status = 'inactive' "
+                "WHERE company_id = :cid"
+            ),
+            {"cid": str(company_id)},
+        )
+
+        # Write the audit log BEFORE the delete so entity_id references still make sense
+        self._audit.log(
+            action=AuditAction.COMPANY_UPDATED,
+            description=f"Company '{company_name}' permanently deleted by '{deleted_by.email}'.",
+            user_id=deleted_by.id,
+            entity_type="company",
+            entity_id=str(company_id),
+            old_values={"name": company_name},
+            new_values={"deleted": True},
+            ip_address=ip_address,
+            request_id=request_id,
+        )
+
+        # Flush the audit log and the user detach; then drop the ORM identity
+        # for the company to prevent SQLAlchemy from emitting a cascade UPDATE
+        # that would try to null out loan_applications.company_id.
+        self._db.flush()
+        self._db.expunge(company)
+
+        # DB-level cascade drops loan_applications -> documents -> ocr_data,
+        # financial_ratios, predictions, reports in one shot.
+        self._db.execute(
+            text("DELETE FROM companies WHERE id = :cid"),
+            {"cid": str(company_id)},
+        )
+
+        self._db.commit()
+        logger.info(
+            "Company hard-deleted",
+            extra={"company_id": str(company_id), "company_name": company_name},
+        )
+        return company_name

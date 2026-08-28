@@ -124,8 +124,22 @@ class UserService:
         ip_address: str = "unknown",
         request_id: str = "unknown",
     ) -> User:
-        old = {"full_name": user.full_name, "phone": user.phone, "department": user.department}
+        old = {
+            "email": user.email,
+            "full_name": user.full_name,
+            "phone": user.phone,
+            "department": user.department,
+        }
         updates = data.model_dump(exclude_none=True)
+
+        # Uniqueness check when changing email
+        if "email" in updates and updates["email"].lower() != user.email.lower():
+            new_email = updates["email"].lower()
+            existing = self._user_repo.get_by_email(new_email)
+            if existing and existing.id != user.id:
+                raise ConflictError(message=f"Email '{new_email}' is already in use.")
+            updates["email"] = new_email
+
         self._user_repo.update(user, **updates)
 
         self._audit_repo.log(

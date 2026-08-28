@@ -209,6 +209,56 @@ class ReportService:
             total=len(reports),
         )
 
+    def delete_report(
+        self,
+        report_id: uuid.UUID,
+        deleted_by: User,
+        ip_address: str = "unknown",
+        request_id: str = "unknown",
+    ) -> str:
+        """
+        Permanently delete a report record and its PDF file from disk.
+        Admin-only. Returns the report filename that was deleted.
+        """
+        report = self._report_repo.get_by_id(report_id)
+        if not report:
+            raise NotFoundError(message=f"Report '{report_id}' not found.")
+
+        filename = report.filename
+        file_rel = report.file_path
+        app_id = report.application_id
+
+        self._audit.log(
+            action=AuditAction.REPORT_GENERATED,
+            description=f"Report '{filename}' deleted by '{deleted_by.email}'.",
+            user_id=deleted_by.id,
+            entity_type="report",
+            entity_id=str(report_id),
+            old_values={"filename": filename, "status": report.status.value},
+            new_values={"deleted": True},
+            ip_address=ip_address,
+            request_id=request_id,
+        )
+
+        self._db.delete(report)
+        self._db.commit()
+
+        try:
+            abs_path = settings.report_path / file_rel
+            if abs_path.exists():
+                abs_path.unlink()
+        except OSError as exc:
+            logger.warning(
+                "Failed to remove report file from disk",
+                extra={"report_id": str(report_id), "path": str(file_rel), "error": str(exc)},
+            )
+
+        logger.info(
+            "Report deleted",
+            extra={"report_id": str(report_id), "application_id": str(app_id)},
+        )
+        return filename
+
     def get_report_path(self, report_id: uuid.UUID) -> Path:
         """Return the absolute path to the PDF file for download."""
         report = self._report_repo.get_by_id(report_id)

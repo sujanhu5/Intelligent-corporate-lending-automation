@@ -103,10 +103,7 @@ class ApplicationService:
         search: Optional[str] = None,
         current_user: Optional[User] = None,
     ) -> ApplicationListResponse:
-        # Officers only see applications assigned to them (unless admin)
         officer_filter = None
-        if current_user and current_user.role == UserRole.OFFICER:
-            officer_filter = current_user.id
 
         apps, total = self._repo.list(
             page=page,

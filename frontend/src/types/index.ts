@@ -47,7 +47,12 @@ export type CompanyType = 'private_limited' | 'public_limited' | 'partnership' |
 export type Industry =
   | 'manufacturing' | 'retail' | 'wholesale' | 'services' | 'technology'
   | 'healthcare' | 'construction' | 'real_estate' | 'agriculture'
-  | 'financial' | 'hospitality' | 'transportation' | 'energy' | 'other'
+  | 'financial' | 'hospitality' | 'transportation' | 'energy'
+  | 'banking' | 'insurance' | 'pharmaceuticals' | 'education'
+  | 'telecommunications' | 'automotive' | 'food_beverage'
+  | 'media_entertainment' | 'mining' | 'logistics' | 'chemicals'
+  | 'textiles' | 'consulting' | 'e_commerce' | 'renewable_energy'
+  | 'other'
 export type CompanyStatus = 'active' | 'inactive' | 'under_review' | 'blacklisted'
 
 export interface Company {

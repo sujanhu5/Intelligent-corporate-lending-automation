@@ -27,12 +27,13 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 # Minimum width/height we want to work with. Images below this get upscaled.
-_MIN_DIM = 1000
+_MIN_DIM = 1600
 
 
 def preprocess_image(image: np.ndarray, dpi: int = 300) -> np.ndarray:
     """
-    Full preprocessing pipeline.
+    Full preprocessing pipeline, tuned for scanned or photographed documents
+    that may be low-resolution, low-contrast, or slightly out of focus.
 
     Args:
         image: BGR or grayscale uint8 NumPy array.
@@ -44,10 +45,48 @@ def preprocess_image(image: np.ndarray, dpi: int = 300) -> np.ndarray:
     img = _to_grayscale(image)
     img = _upscale_if_small(img)
     img = _denoise(img)
+    # Blur-recovery: boost local contrast and sharpen edges before binarising.
+    img = _enhance_contrast(img)
+    if _is_blurry(img):
+        img = _unsharp_mask(img)
     img = _binarise(img)
     img = _deskew(img)
     img = _morphological_cleanup(img)
     return img
+
+
+def _enhance_contrast(image: np.ndarray) -> np.ndarray:
+    """CLAHE — local histogram equalisation. Recovers detail in faded or
+    unevenly-lit scans without amplifying global noise."""
+    try:
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        return clahe.apply(image)
+    except Exception as exc:
+        logger.warning("CLAHE failed: %s — skipping", exc)
+        return image
+
+
+def _is_blurry(image: np.ndarray, threshold: float = 100.0) -> bool:
+    """Variance of the Laplacian is a standard sharpness metric —
+    low values indicate a blurred region. Threshold ~100 works well
+    for document scans at 200–300 DPI."""
+    try:
+        return float(cv2.Laplacian(image, cv2.CV_64F).var()) < threshold
+    except Exception:
+        return False
+
+
+def _unsharp_mask(image: np.ndarray) -> np.ndarray:
+    """Classic unsharp mask — subtract a Gaussian-blurred copy from the
+    original with a boosted weight. Recovers stroke edges on blurred text
+    where thresholding alone would smear characters together."""
+    try:
+        blurred = cv2.GaussianBlur(image, (0, 0), sigmaX=1.5)
+        sharpened = cv2.addWeighted(image, 1.7, blurred, -0.7, 0)
+        return sharpened
+    except Exception as exc:
+        logger.warning("Unsharp mask failed: %s — skipping", exc)
+        return image
 
 
 # ---------------------------------------------------------------------------

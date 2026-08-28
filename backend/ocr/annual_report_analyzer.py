@@ -77,7 +77,7 @@ class UnitContext:
 @dataclass
 class AnalysisResult:
     total_pages: int
-    toc_found: bool
+    toc_found: bool = False
     toc_pages: List[int] = field(default_factory=list)
     sections: List[DetectedSection] = field(default_factory=list)
     unit_context: Optional[UnitContext] = None
@@ -110,6 +110,8 @@ _BALANCE_SHEET_PATTERNS = [
     re.compile(r"(?:standalone\s+)?balance\s+sheet", re.IGNORECASE),
     re.compile(r"statement\s+of\s+financial\s+position", re.IGNORECASE),
     re.compile(r"(?:standalone\s+)?consolidated\s+balance\s+sheet", re.IGNORECASE),
+    re.compile(r"statement\s+of\s+assets\s+and\s+liabilities", re.IGNORECASE),
+    re.compile(r"balance\s+sheet\s+as\s+(?:at|on)", re.IGNORECASE),
 ]
 
 _PROFIT_LOSS_PATTERNS = [
@@ -117,11 +119,15 @@ _PROFIT_LOSS_PATTERNS = [
     re.compile(r"profit\s+and\s+loss\s+(?:account|statement)", re.IGNORECASE),
     re.compile(r"(?:consolidated\s+)?income\s+statement", re.IGNORECASE),
     re.compile(r"statement\s+of\s+(?:comprehensive\s+)?income", re.IGNORECASE),
+    re.compile(r"profit\s*&\s*loss", re.IGNORECASE),
+    re.compile(r"statement\s+of\s+(?:total\s+)?comprehensive\s+(?:income|loss)", re.IGNORECASE),
+    re.compile(r"statement\s+of\s+operations", re.IGNORECASE),
 ]
 
 _CASH_FLOW_PATTERNS = [
     re.compile(r"(?:statement\s+of\s+)?cash\s+flow(?:s)?(?:\s+statement)?", re.IGNORECASE),
     re.compile(r"cash\s+flow\s+from\s+operat", re.IGNORECASE),
+    re.compile(r"(?:statement\s+of\s+)?cash\s+and\s+cash\s+equivalents", re.IGNORECASE),
 ]
 
 _SECTION_PATTERNS: Dict[SectionType, List[re.Pattern]] = {
@@ -185,10 +191,10 @@ _FY_PATTERNS = [
 ]
 
 # Max pages to extract per financial statement section
-_MAX_SECTION_PAGES = 8
+_MAX_SECTION_PAGES = 12
 
 # Pages to scan for TOC (from the beginning)
-_TOC_SCAN_RANGE = 30
+_TOC_SCAN_RANGE = 40
 
 
 # ---------------------------------------------------------------------------
@@ -359,9 +365,9 @@ def _detect_via_keywords(
     for i, text in enumerate(page_texts):
         page_num = i + 1
 
-        # Only match if the heading appears near the top of the page
-        # (first 500 chars) — avoids matching references in body text
-        header_region = text[:500]
+        # Check the first 1500 chars — financial headers may appear after
+        # company name, statutory info, and other preamble on the page
+        header_region = text[:1500]
 
         for section_type, patterns in _SECTION_PATTERNS.items():
             for pat in patterns:

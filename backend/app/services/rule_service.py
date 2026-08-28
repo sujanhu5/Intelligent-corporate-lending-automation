@@ -248,13 +248,42 @@ class RuleService:
                 )
             )
 
-        # ── 2. Load active rules ──────────────────────────────────────────────
-        rules: List[Rule] = self._repo.list_active_ordered()
-        if not rules:
+        # ── 2. Load active rules, scoped to this company's industry ───────────
+        all_rules: List[Rule] = self._repo.list_active_ordered()
+        if not all_rules:
             raise BadRequestError(
                 message="No active rules are configured in the system. "
                 "An administrator must create at least one rule before evaluation can proceed."
             )
+
+        # A rule applies when it is global (industry is None) OR its industry
+        # scope matches the applicant company's industry. This prevents, e.g.,
+        # an energy-sector rule from firing on a technology company.
+        company_industry = app.company.industry if app.company else None
+        rules = [
+            r for r in all_rules
+            if r.industry is None or r.industry == company_industry
+        ]
+        if not rules:
+            raise BadRequestError(
+                message=(
+                    f"No rules apply to application '{app.application_number}'. "
+                    f"There are active rules, but all are scoped to industries "
+                    f"other than '{company_industry.value if company_industry else 'unspecified'}'. "
+                    "Add at least one global rule (no industry scope) or a rule "
+                    "matching this company's sector."
+                )
+            )
+
+        logger.info(
+            "Rules scoped for evaluation",
+            extra={
+                "app_id": str(application_id),
+                "company_industry": company_industry.value if company_industry else None,
+                "total_active": len(all_rules),
+                "applicable": len(rules),
+            },
+        )
 
         # ── 3. Load latest ratio record ───────────────────────────────────────
         fr = self._get_latest_ratio(application_id)

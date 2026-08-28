@@ -7,6 +7,7 @@ import { ratiosApi } from '@/api/ratios'
 import { rulesApi } from '@/api/rules'
 import { predictionsApi } from '@/api/predictions'
 import { reportsApi } from '@/api/reports'
+import { pipelineApi } from '@/api/pipeline'
 import type {
   Application, ApplicationOCRSummary, Document, FinancialRatioResponse,
   RuleEngineResponse, PredictionResponse, Report
@@ -19,6 +20,7 @@ import Modal, { ConfirmModal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
 import { extractError } from '@/api/client'
+import { useAuthStore } from '@/store/auth'
 
 type Tab = 'overview' | 'documents' | 'ocr' | 'ratios' | 'rules' | 'prediction' | 'reports'
 
@@ -126,10 +128,10 @@ export default function ApplicationDetail() {
 
   const pipeline = app.pipeline
   const canSubmit = app.status === 'draft' && documents.length > 0
-  const canRunOCR = documents.some(d => d.status === 'uploaded')
-  const canRunRatios = pipeline.ocr_completed && !pipeline.ratios_calculated
-  const canRunRules = pipeline.ratios_calculated && !pipeline.rules_evaluated
-  const canRunML = pipeline.rules_evaluated && !pipeline.ml_predicted
+  const canRunOCR = documents.length > 0
+  const canRunRatios = pipeline.ocr_completed
+  const canRunRules = pipeline.ratios_calculated
+  const canRunML = pipeline.rules_evaluated
   const canGenReport = pipeline.ratios_calculated
 
   return (
@@ -154,37 +156,58 @@ export default function ApplicationDetail() {
               <>
                 {canRunOCR && (
                   <Button size="sm" loading={actionLoading === 'ocr'}
+                    variant={pipeline.ocr_completed ? 'secondary' : 'primary'}
                     onClick={() => run('ocr', async () => {
-                      for (const doc of documents.filter(d => d.status === 'uploaded')) {
+                      if (pipeline.ocr_completed) await pipelineApi.resetStage(app.id, 'ocr')
+                      for (const doc of documents.filter(d => ['uploaded', 'extracted', 'failed'].includes(d.status))) {
                         await ocrApi.process(doc.id)
                       }
                       success('OCR complete.')
                     })}>
-                    Run OCR
+                    {pipeline.ocr_completed ? 'Re-run OCR' : 'Run OCR'}
                   </Button>
                 )}
                 {canRunRatios && (
                   <Button size="sm" loading={actionLoading === 'ratios'}
-                    onClick={() => run('ratios', () => ratiosApi.calculate(app.id).then(() => success('Ratios calculated.')))}>
-                    Calc Ratios
+                    variant={pipeline.ratios_calculated ? 'secondary' : 'primary'}
+                    onClick={() => run('ratios', async () => {
+                      if (pipeline.ratios_calculated) await pipelineApi.resetStage(app.id, 'ratios')
+                      await ratiosApi.calculate(app.id)
+                      success('Ratios calculated.')
+                    })}>
+                    {pipeline.ratios_calculated ? 'Re-calc Ratios' : 'Calc Ratios'}
                   </Button>
                 )}
                 {canRunRules && (
                   <Button size="sm" loading={actionLoading === 'rules'}
-                    onClick={() => run('rules', () => rulesApi.evaluate(app.id).then(() => success('Rules evaluated.')))}>
-                    Eval Rules
+                    variant={pipeline.rules_evaluated ? 'secondary' : 'primary'}
+                    onClick={() => run('rules', async () => {
+                      if (pipeline.rules_evaluated) await pipelineApi.resetStage(app.id, 'rules')
+                      await rulesApi.evaluate(app.id)
+                      success('Rules evaluated.')
+                    })}>
+                    {pipeline.rules_evaluated ? 'Re-eval Rules' : 'Eval Rules'}
                   </Button>
                 )}
                 {canRunML && (
                   <Button size="sm" loading={actionLoading === 'ml'}
-                    onClick={() => run('ml', () => predictionsApi.predict(app.id).then(() => success('ML prediction complete.')))}>
-                    Run ML
+                    variant={pipeline.ml_predicted ? 'secondary' : 'primary'}
+                    onClick={() => run('ml', async () => {
+                      if (pipeline.ml_predicted) await pipelineApi.resetStage(app.id, 'ml')
+                      await predictionsApi.predict(app.id)
+                      success('ML prediction complete.')
+                    })}>
+                    {pipeline.ml_predicted ? 'Re-run ML' : 'Run ML'}
                   </Button>
                 )}
                 {canGenReport && (
                   <Button size="sm" variant="secondary" loading={actionLoading === 'report'}
-                    onClick={() => run('report', () => reportsApi.generate(app.id).then(() => success('Report generated.')))}>
-                    Gen Report
+                    onClick={() => run('report', async () => {
+                      if (pipeline.report_generated) await pipelineApi.resetStage(app.id, 'report')
+                      await reportsApi.generate(app.id)
+                      success('Report generated.')
+                    })}>
+                    {pipeline.report_generated ? 'Re-gen Report' : 'Gen Report'}
                   </Button>
                 )}
               </>
@@ -422,7 +445,7 @@ function DocumentsTab({ appId, documents, onRefresh }: {
         </div>
         <label className={`btn btn-primary ${uploading ? 'opacity-50 pointer-events-none' : ''} cursor-pointer`}>
           {uploading ? 'Uploading…' : '+ Upload PDF'}
-          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tiff" className="hidden" onChange={handleUpload} />
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.txt,.csv" className="hidden" onChange={handleUpload} />
         </label>
       </div>
 
@@ -735,7 +758,25 @@ function PredictionTab({ prediction }: { prediction: PredictionResponse | null }
 function ReportsTab({ appId, report }: { appId: string; report: Report | null }) {
   const [reports, setReports] = useState<Report[]>([])
   const [generating, setGenerating] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const { success, error } = useToast()
+  const user = useAuthStore(s => s.user)
+  const isAdmin = user?.role === 'admin'
+
+  const handleDelete = async (r: Report) => {
+    if (!window.confirm(`Permanently delete report "${r.filename}"? This cannot be undone.`)) return
+    setDeletingId(r.id)
+    try {
+      await reportsApi.delete(r.id)
+      const res = await reportsApi.list(appId)
+      setReports(res.items)
+      success('Report deleted.')
+    } catch (err) {
+      error(extractError(err))
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   useEffect(() => {
     reportsApi.list(appId).then(r => setReports(r.items)).catch(() => {})
@@ -780,14 +821,23 @@ function ReportsTab({ appId, report }: { appId: string; report: Report | null })
                 {r.status}
               </span>
               {r.status === 'complete' && (
-                <a
-                  href={reportsApi.downloadUrl(r.id)}
-                  download={r.filename}
+                <button
+                  type="button"
+                  onClick={() => reportsApi.download(r.id, r.filename).catch(err => error(extractError(err)))}
                   className="btn btn-secondary btn-sm"
-                  target="_blank" rel="noreferrer"
                 >
                   Download
-                </a>
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(r)}
+                  disabled={deletingId === r.id}
+                  className="btn btn-danger btn-sm"
+                >
+                  {deletingId === r.id ? 'Deleting…' : 'Delete'}
+                </button>
               )}
             </div>
           ))}

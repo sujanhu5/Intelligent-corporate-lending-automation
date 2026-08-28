@@ -115,6 +115,19 @@ class AnnualReportService:
                         f"(type: {doc.document_type.value})."
             )
 
+        # Idempotency — on re-run, delete any previously-created sub-documents
+        # (and their OCR records via DB-level CASCADE) so we can create fresh
+        # ones without hitting the stored_filename uniqueness constraint.
+        # Raw SQL is used so SQLAlchemy's ORM cascade does not try to nullify
+        # the child FKs before deletion.
+        from sqlalchemy import text as _text
+        self._db.execute(
+            _text("DELETE FROM documents WHERE parent_document_id = :pid"),
+            {"pid": str(doc.id)},
+        )
+        self._db.flush()
+        self._db.expire_all()
+
         # Mark parent as processing
         self._doc_repo.update_status(doc, DocumentStatus.PROCESSING)
         self._audit.log(
@@ -135,13 +148,19 @@ class AnnualReportService:
             analysis = analyze_annual_report(str(file_path))
 
             if not analysis.sections:
-                self._doc_repo.update_status(
-                    doc, DocumentStatus.FAILED,
-                    error="No financial statement sections detected in the annual report."
+                # No standard sections detected — fall back to whole-document
+                # OCR extraction so the pipeline can still make progress.
+                logger.warning(
+                    "No financial sections detected — falling back to whole-document OCR",
+                    extra={"doc_id": str(doc.id), "filename": doc.original_filename},
                 )
-                raise OCRError(
-                    message="Annual report analysis found no financial statement sections. "
-                            "The PDF may not contain standard financial statements."
+                return self._fallback_whole_document(
+                    doc=doc,
+                    analysis=analysis,
+                    file_path=file_path,
+                    triggered_by=triggered_by,
+                    ip_address=ip_address,
+                    request_id=request_id,
                 )
 
             # Update financial year on the parent if detected
@@ -433,6 +452,131 @@ class AnnualReportService:
             )
             self._db.add(record)
             self._db.flush()
+
+    def _fallback_whole_document(
+        self,
+        doc: Document,
+        analysis: AnalysisResult,
+        file_path: Path,
+        triggered_by,
+        ip_address: str,
+        request_id: str,
+    ) -> AnnualReportProcessingResult:
+        """
+        Fallback path when the analyzer detects no standard financial sections.
+
+        Runs plain OCR + financial-field parsing over the entire document,
+        stores a single OCR record on the parent, marks it EXTRACTED, and
+        advances the application pipeline. Downstream stages (ratios / rules
+        / ML / report) then run against whatever fields were extracted.
+        """
+        from ocr.extractor import extract_text
+
+        extraction = extract_text(str(file_path))
+        parsed = parse_financials(extraction.raw_text)
+
+        combined_fields: Dict[str, Optional[float]] = {f: None for f in FINANCIAL_FIELDS}
+        for k, v in (parsed.fields or {}).items():
+            if k in combined_fields:
+                combined_fields[k] = v
+
+        combined_confidences: Dict[str, float] = dict(parsed.confidence or {})
+
+        existing = (
+            self._db.query(OCRData)
+            .filter(OCRData.document_id == doc.id)
+            .first()
+        )
+
+        metadata = {
+            "extraction_method": "annual_report_fallback_whole_document",
+            "analysis_method": analysis.analysis_method,
+            "total_report_pages": analysis.total_pages,
+            "sections_analyzed": 0,
+            "toc_found": analysis.toc_found,
+            "company_name": analysis.company_name,
+            "financial_year": analysis.financial_year,
+            "unit_context": analysis.unit_context.source_text if analysis.unit_context else None,
+            "field_confidence": combined_confidences,
+            "warnings": (analysis.warnings or []) + (parsed.warnings or []) + [
+                "No standard financial statement sections detected. "
+                "Full-document OCR was used as a fallback."
+            ],
+            "sections": [],
+            "extracted_field_count": parsed.extracted_count,
+            "overall_parse_confidence": parsed.overall_confidence,
+            "duration_seconds": extraction.duration_seconds,
+            "char_count": len(extraction.raw_text),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+        if existing:
+            existing.raw_text = extraction.raw_text
+            existing.confidence_score = extraction.mean_confidence
+            existing.page_count = extraction.page_count
+            existing.extracted_fields = combined_fields
+            existing.extraction_metadata = metadata
+        else:
+            self._db.add(OCRData(
+                document_id=doc.id,
+                raw_text=extraction.raw_text,
+                confidence_score=extraction.mean_confidence,
+                page_count=extraction.page_count,
+                extracted_fields=combined_fields,
+                extraction_metadata=metadata,
+            ))
+        self._db.flush()
+
+        if analysis.financial_year and not doc.financial_year:
+            self._doc_repo.update(doc, financial_year=analysis.financial_year)
+
+        self._doc_repo.update_status(doc, DocumentStatus.EXTRACTED)
+        self._mark_application_ocr_complete(doc.application_id)
+
+        self._audit.log(
+            action=AuditAction.OCR_COMPLETED,
+            description=(
+                f"Annual report processed via whole-document fallback for "
+                f"'{doc.original_filename}'. "
+                f"{parsed.extracted_count}/{len(FINANCIAL_FIELDS)} fields extracted."
+            ),
+            user_id=triggered_by.id,
+            entity_type="document",
+            entity_id=str(doc.id),
+            new_values={
+                "sections": 0,
+                "fields_extracted": parsed.extracted_count,
+                "method": "fallback_whole_document",
+            },
+            ip_address=ip_address,
+            request_id=request_id,
+        )
+
+        logger.info(
+            "Annual report processed via fallback",
+            extra={
+                "doc_id": str(doc.id),
+                "fields_extracted": parsed.extracted_count,
+                "confidence": extraction.mean_confidence,
+            },
+        )
+
+        return AnnualReportProcessingResult(
+            parent_document_id=str(doc.id),
+            application_id=str(doc.application_id),
+            total_pages=analysis.total_pages,
+            sections_detected=0,
+            sections_processed=[],
+            analysis_method=analysis.analysis_method,
+            company_name=analysis.company_name,
+            financial_year=analysis.financial_year,
+            unit_context=analysis.unit_context.source_text if analysis.unit_context else None,
+            overall_confidence=extraction.mean_confidence,
+            warnings=metadata["warnings"],
+            has_all_statements=False,
+            combined_fields=combined_fields,
+            total_fields_extracted=parsed.extracted_count,
+        )
 
     def _mark_application_ocr_complete(self, application_id: uuid.UUID) -> None:
         """Check if all non-child documents are extracted and advance pipeline."""

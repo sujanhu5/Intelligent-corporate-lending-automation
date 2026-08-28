@@ -16,8 +16,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
-from app.dependencies import get_client_ip, get_current_user, require_analyst
+from app.dependencies import get_client_ip, get_current_user, require_admin, require_analyst
 from app.models.user import User
+from app.schemas.auth import MessageResponse
 from app.schemas.report import ReportListResponse, ReportResponse
 from app.services.report_service import ReportService
 
@@ -124,3 +125,28 @@ def download_report(
             "Cache-Control": "no-store",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /reports/{report_id}  (admin only)
+# ---------------------------------------------------------------------------
+
+@router.delete(
+    "/{report_id}",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Delete a report and remove its PDF file (admin only)",
+)
+def delete_report(
+    request: Request,
+    report_id: uuid.UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    filename = ReportService(db).delete_report(
+        report_id=report_id,
+        deleted_by=current_user,
+        ip_address=get_client_ip(request),
+        request_id=getattr(request.state, "request_id", "unknown"),
+    )
+    return MessageResponse(message=f"Report '{filename}' has been permanently deleted.")

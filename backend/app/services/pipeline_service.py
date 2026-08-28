@@ -404,7 +404,16 @@ class PipelineService:
     def _do_ocr(self, application_id: uuid.UUID, user: User, ctx: dict) -> str:
         docs = self._doc_repo.list_by_application(application_id)
         pending = [d for d in docs if d.status != DocumentStatus.EXTRACTED]
+
         if not pending:
+            # All documents already extracted — make sure the application's
+            # ocr_completed flag reflects that, so downstream stages can run.
+            app = self._app_repo.get_by_id(application_id, load_company=False)
+            if app and not app.ocr_completed and docs:
+                top_level = [d for d in docs if d.parent_document_id is None]
+                if top_level and all(d.status == DocumentStatus.EXTRACTED for d in top_level):
+                    self._app_repo.mark_pipeline_stage(app, "ocr_completed")
+                    self._db.commit()
             return f"skip:all {len(docs)} document(s) already extracted"
 
         extracted = 0

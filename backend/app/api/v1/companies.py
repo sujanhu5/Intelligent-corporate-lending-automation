@@ -16,6 +16,7 @@ from app.dependencies import (
     get_client_ip,
     get_current_user,
     get_pagination,
+    require_admin,
     require_analyst,
     require_officer,
 )
@@ -161,6 +162,32 @@ def deactivate_company(
         request_id=getattr(request.state, "request_id", "unknown"),
     )
     return MessageResponse(message=f"Company '{company.name}' has been deactivated.")
+
+
+# ---------------------------------------------------------------------------
+# DELETE /companies/{company_id}/permanent  (hard delete — admin only)
+# ---------------------------------------------------------------------------
+
+@router.delete(
+    "/{company_id}/permanent",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Permanently delete a company and all related data (admin only)",
+)
+def hard_delete_company(
+    request: Request,
+    company_id: uuid.UUID,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    service = CompanyService(db)
+    name = service.hard_delete_company(
+        company_id=company_id,
+        deleted_by=current_user,
+        ip_address=get_client_ip(request),
+        request_id=getattr(request.state, "request_id", "unknown"),
+    )
+    return MessageResponse(message=f"Company '{name}' and all associated data permanently deleted.")
 
 
 # ---------------------------------------------------------------------------

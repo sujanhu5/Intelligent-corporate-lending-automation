@@ -9,6 +9,7 @@ import { PageLoader } from '@/components/ui/Spinner'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { extractError } from '@/api/client'
+import { useAuthStore } from '@/store/auth'
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -24,8 +25,13 @@ export default function CompanyDetail() {
   const [company, setCompany] = useState<Company | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmName, setConfirmName] = useState('')
   const navigate = useNavigate()
-  const { error } = useToast()
+  const { error, success } = useToast()
+  const user = useAuthStore(s => s.user)
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     if (!id) return
@@ -37,6 +43,22 @@ export default function CompanyDetail() {
       .finally(() => setLoading(false))
   }, [id, error])
 
+  const handleDelete = async () => {
+    if (!id || confirmName !== company?.name) return
+    setDeleting(true)
+    try {
+      const res = await companiesApi.permanentDelete(id)
+      success(res.message || 'Company permanently deleted.')
+      navigate('/companies')
+    } catch (err) {
+      error(extractError(err))
+    } finally {
+      setDeleting(false)
+      setShowDeleteModal(false)
+      setConfirmName('')
+    }
+  }
+
   if (loading) return <PageLoader />
   if (!company) return <div className="text-ink-muted">Company not found.</div>
 
@@ -47,9 +69,19 @@ export default function CompanyDetail() {
         subtitle={company.registration_number}
         breadcrumb={[{ label: 'Companies', href: '/companies' }, { label: company.name }]}
         actions={
-          <Button onClick={() => navigate('/applications/new', { state: { company_id: company.id } })}>
-            + New Application
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/applications/new', { state: { company_id: company.id } })}>
+              + New Application
+            </Button>
+            {isAdmin && (
+              <Button
+                variant="danger"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Delete Company
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -126,6 +158,44 @@ export default function CompanyDetail() {
           </div>
         )}
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-surface-1 rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <h3 className="text-h4 text-ink-primary mb-2 font-mono">Permanently Delete Company</h3>
+            <p className="text-small text-ink-secondary mb-4">
+              This will permanently delete <strong>{company.name}</strong> along with all applications,
+              documents, and associated data. Company users will be deactivated. This action cannot be undone.
+            </p>
+            <label className="text-caption text-ink-muted block mb-1">
+              Type the company name to confirm:
+            </label>
+            <input
+              type="text"
+              value={confirmName}
+              onChange={e => setConfirmName(e.target.value)}
+              placeholder={company.name}
+              className="w-full px-3 py-2 rounded border border-border bg-surface-2 text-ink-primary text-small mb-4 focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => { setShowDeleteModal(false); setConfirmName('') }}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={confirmName !== company.name || deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete Permanently'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

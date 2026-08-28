@@ -229,6 +229,37 @@ class ApplicationRepository:
         self._db.flush()
         return app
 
+    def reset_pipeline_from(self, app: Application, stage: str) -> Application:
+        """
+        Reset a pipeline stage and all downstream stages.
+        This allows re-running a step and everything after it.
+        """
+        ordered_stages = [
+            "ocr_completed",
+            "ratios_calculated",
+            "rules_evaluated",
+            "ml_predicted",
+            "report_generated",
+        ]
+        if stage not in ordered_stages:
+            raise ValueError(f"Unknown pipeline stage: {stage}")
+
+        idx = ordered_stages.index(stage)
+        for s in ordered_stages[idx:]:
+            setattr(app, s, False)
+
+        stage_to_status = {
+            "ocr_completed": ApplicationStatus.SUBMITTED,
+            "ratios_calculated": ApplicationStatus.OCR_COMPLETE,
+            "rules_evaluated": ApplicationStatus.RATIO_CALCULATED,
+            "ml_predicted": ApplicationStatus.RULE_EVALUATED,
+            "report_generated": ApplicationStatus.ML_PREDICTED,
+        }
+        if app.status not in _TERMINAL_STATUSES:
+            app.status = stage_to_status[stage]
+        self._db.flush()
+        return app
+
     def mark_pipeline_stage(self, app: Application, stage: str) -> Application:
         """
         Mark a pipeline stage as complete.

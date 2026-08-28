@@ -1,0 +1,966 @@
+================================================================================
+  CORPORATE LENDING AUTOMATION (CLA) — COMPLETE PROJECT REFERENCE
+  Final Year Project (FYP) — Full-Stack AI-Powered Credit Assessment Platform
+  Last Updated: 2026-08-27
+================================================================================
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+CLA is a production-grade, full-stack Corporate Lending Automation platform
+that automates the entire corporate loan underwriting process — from document
+intake and OCR extraction through financial analysis, rule evaluation, ML risk
+scoring, and credit report generation.
+
+The platform supports THREE user portals:
+  - COMPANY PORTAL: Companies register, create loan applications, upload
+    annual reports (PDFs up to 100 MB). The system auto-detects Balance Sheet,
+    P&L, and Cash Flow sections from the annual report.
+  - BANK PORTAL: Bank officers/analysts manage applications, review pipeline
+    stages, view credit reports, and make final decisions.
+  - ADMIN PORTAL: System administrators manage users, companies, rules, and
+    view platform-wide analytics.
+
+Project Location: D:\PROJECT\Coorporate_lending_automation
+Git Branch: master (main branch: main)
+
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+BACKEND:
+  - Python 3.11+
+  - FastAPI 0.104.1 (REST API framework)
+  - Uvicorn 0.24.0 (ASGI server)
+  - SQLAlchemy 2.0.23 (ORM, sync mode with psycopg2)
+  - PostgreSQL 18 (database)
+  - Alembic 1.12.1 (database migrations)
+  - Pydantic 2.5.2 (validation & schemas)
+  - Python-Jose 3.3.0 + Passlib 1.7.4 + Bcrypt (JWT auth)
+
+OCR & DOCUMENT PROCESSING:
+  - PyMuPDF (fitz) 1.23.8 (PDF text extraction — native + fallback)
+  - Tesseract OCR via pytesseract 0.3.10
+  - OpenCV 4.8.1 (image preprocessing for OCR)
+  - pdf2image 1.16.3 (PDF to image conversion)
+  - Pillow 10.1.0 (image processing)
+
+MACHINE LEARNING:
+  - scikit-learn 1.3.2 (Logistic Regression, Random Forest)
+  - XGBoost 2.0.2 (PRIMARY model — forced as default)
+  - SHAP 0.44.0 (model explainability)
+  - imbalanced-learn 0.11.0 (SMOTE oversampling)
+  - pandas 2.1.4, numpy 1.26.2 (data processing)
+  - joblib 1.3.2 (model serialization)
+
+REPORT GENERATION:
+  - ReportLab 4.0.7 (PDF credit report generation)
+  - svglib 1.5.1 (SVG support in reports)
+
+FRONTEND:
+  - React 18.3.1 (UI framework)
+  - TypeScript 5.5.3
+  - Vite 5.3.4 (build tool + dev server)
+  - TailwindCSS 3.4.6 (utility-first CSS)
+  - React Router DOM 6.24.1 (routing)
+  - Zustand 4.5.4 (state management)
+  - Recharts 2.12.7 (charts & data visualization)
+  - React Hook Form 7.52.1 (form handling)
+  - Axios 1.7.2 (HTTP client)
+
+DATABASE:
+  - PostgreSQL 18
+  - Connection: postgresql://postgres:sujan@localhost:5432/corporate_lending
+
+
+================================================================================
+3. CREDENTIALS & ACCESS
+================================================================================
+
+Database:
+  - Host: localhost:5432
+  - Database: corporate_lending
+  - User: postgres
+  - Password: sujan
+
+Admin User:
+  - Email: admin@corporatelending.com
+  - Password: Admin@1234
+  - Role: admin
+
+Bank Officer User:
+  - Email: sujanhu96@gmail.com
+  - Password: Officer@1234
+  - Role: officer
+
+Company User:
+  - Email: sujan@gmail.com
+  - Password: Company@1234
+  - Role: company
+
+JWT Configuration:
+  - Algorithm: HS256
+  - Token Expiry: 480 minutes (8 hours)
+  - Secret Key: (in .env file)
+  - Token stored as "access_token" in localStorage
+
+
+================================================================================
+4. HOW TO RUN
+================================================================================
+
+BACKEND:
+  cd backend
+  pip install -r requirements.txt
+  # Make sure PostgreSQL is running with database "corporate_lending"
+  alembic upgrade head          # Run migrations
+  python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+FRONTEND:
+  cd frontend
+  npm install
+  npm run dev                   # Starts on http://localhost:5173
+
+URLS:
+  - Frontend:     http://localhost:5173
+  - Backend API:  http://localhost:8000/api/v1
+  - Swagger Docs: http://localhost:8000/docs
+  - Health Check: http://localhost:8000/health
+
+Vite Proxy: Frontend proxies /api/* to http://localhost:8000
+
+
+================================================================================
+5. ENVIRONMENT VARIABLES (.env in project root)
+================================================================================
+
+APP_NAME=Corporate Lending Automation
+APP_VERSION=1.0.0
+ENVIRONMENT=development
+DEBUG=true
+SECRET_KEY=<random-hex-string>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=480
+DATABASE_URL=postgresql://postgres:sujan@localhost:5432/corporate_lending
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/1
+CELERY_RESULT_BACKEND=redis://localhost:6379/2
+UPLOAD_DIR=uploads
+REPORT_DIR=reports
+RESULTS_DIR=results
+LOG_DIR=logs
+MODELS_DIR=models
+DATASET_PATH=datasets/company_bankruptcy_prediction.csv
+TESSERACT_CMD=C:/Program Files/Tesseract-OCR/tesseract.exe
+TESSERACT_LANG=eng
+OCR_DPI=300
+MAX_FILE_SIZE_MB=100
+ML_RANDOM_STATE=42
+TEST_SIZE=0.2
+CV_FOLDS=5
+RATE_LIMIT_PER_MINUTE=60
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+
+
+================================================================================
+6. COMPLETE FILE STRUCTURE
+================================================================================
+
+Coorporate_lending_automation/
+├── .env                              # Environment variables
+├── .env.example                      # Template
+├── .claude/launch.json               # Dev server config
+├── config/feature_config.json        # ML feature configuration
+├── models/metadata.json              # Trained model metadata
+│
+├── backend/
+│   ├── requirements.txt              # Python dependencies
+│   ├── alembic/
+│   │   ├── env.py                    # Alembic configuration
+│   │   └── versions/
+│   │       ├── 162bb6a0ba78_initial_schema.py
+│   │       └── a2f1c8e9d4b7_add_annual_report_support.py
+│   │
+│   ├── app/
+│   │   ├── main.py                   # FastAPI app entry point
+│   │   ├── config.py                 # Settings (pydantic-settings)
+│   │   ├── dependencies.py           # DI: get_current_user, role checks
+│   │   │
+│   │   ├── core/
+│   │   │   ├── exceptions.py         # Custom exception classes
+│   │   │   ├── logging.py            # JSON structured logging
+│   │   │   ├── middleware.py         # Request ID, CORS, error handler
+│   │   │   └── security.py          # JWT create/verify, password hash
+│   │   │
+│   │   ├── database/
+│   │   │   ├── base.py               # SQLAlchemy Base + mixins (id, timestamps)
+│   │   │   └── connection.py         # Engine, SessionLocal, get_db
+│   │   │
+│   │   ├── models/                   # SQLAlchemy ORM models
+│   │   │   ├── user.py              # User (5 roles: admin/officer/analyst/viewer/company)
+│   │   │   ├── company.py           # Company (types, industries, status)
+│   │   │   ├── application.py       # LoanApplication (statuses, pipeline flags)
+│   │   │   ├── document.py          # Document (types incl. annual_report, parent_document_id)
+│   │   │   ├── ocr_data.py          # OCRData (extracted_fields JSONB)
+│   │   │   ├── financial_ratio.py   # FinancialRatio (ratios JSONB)
+│   │   │   ├── prediction.py        # Prediction (model, probability, SHAP, risk)
+│   │   │   ├── report.py            # Report (PDF credit reports)
+│   │   │   ├── rule.py              # Rule (category, operator, threshold, industry)
+│   │   │   └── audit_log.py         # AuditLog (action tracking)
+│   │   │
+│   │   ├── schemas/                  # Pydantic request/response schemas
+│   │   │   ├── auth.py              # Login, Register, Token responses
+│   │   │   ├── user.py              # UserCreate, UserResponse, UserUpdate
+│   │   │   ├── company.py           # CompanyCreate, CompanyResponse
+│   │   │   ├── application.py       # ApplicationCreate, ApplicationResponse
+│   │   │   ├── document.py          # DocumentResponse
+│   │   │   ├── ocr.py               # OCR schemas
+│   │   │   ├── ratio.py             # Ratio schemas
+│   │   │   ├── prediction.py        # Prediction schemas
+│   │   │   ├── report.py            # Report schemas
+│   │   │   ├── rule.py              # Rule CRUD schemas
+│   │   │   ├── pipeline.py          # Pipeline status schemas
+│   │   │   └── common.py            # Pagination, message responses
+│   │   │
+│   │   ├── repositories/            # Data access layer (one per model)
+│   │   │   ├── user_repository.py
+│   │   │   ├── company_repository.py
+│   │   │   ├── application_repository.py
+│   │   │   ├── document_repository.py
+│   │   │   ├── prediction_repository.py
+│   │   │   ├── report_repository.py
+│   │   │   ├── rule_repository.py
+│   │   │   └── audit_repository.py
+│   │   │
+│   │   ├── services/                 # Business logic layer
+│   │   │   ├── auth_service.py       # Login, register, password change
+│   │   │   ├── user_service.py       # User CRUD
+│   │   │   ├── company_service.py    # Company CRUD
+│   │   │   ├── application_service.py # Application lifecycle
+│   │   │   ├── document_service.py   # File upload, storage
+│   │   │   ├── ocr_service.py        # OCR extraction orchestration
+│   │   │   ├── annual_report_service.py # Annual report analysis & extraction
+│   │   │   ├── ratio_service.py      # Financial ratio calculation
+│   │   │   ├── rule_service.py       # Rule evaluation
+│   │   │   ├── prediction_service.py # ML prediction + SHAP
+│   │   │   ├── pipeline_service.py   # End-to-end pipeline orchestration
+│   │   │   └── report_service.py     # PDF credit report generation
+│   │   │
+│   │   ├── api/v1/                   # API route handlers
+│   │   │   ├── router.py            # Master router (aggregates all)
+│   │   │   ├── auth.py              # /auth/* endpoints
+│   │   │   ├── users.py             # /users/* endpoints
+│   │   │   ├── companies.py         # /companies/* endpoints
+│   │   │   ├── applications.py      # /applications/* endpoints
+│   │   │   ├── documents.py         # /documents/* endpoints
+│   │   │   ├── ocr.py               # /ocr/* endpoints
+│   │   │   ├── ratios.py            # /ratios/* endpoints
+│   │   │   ├── rules.py             # /rules/* endpoints
+│   │   │   ├── predictions.py       # /predictions/* endpoints
+│   │   │   ├── reports.py           # /reports/* endpoints
+│   │   │   ├── analytics.py         # /analytics/* endpoints
+│   │   │   ├── pipeline.py          # /pipeline/* endpoints
+│   │   │   └── portal.py            # /portal/* endpoints (company portal)
+│   │   │
+│   │   └── utils/
+│   │       ├── file_utils.py         # File save/delete helpers
+│   │       └── validators.py         # Password strength validation
+│   │
+│   ├── ml/                           # Machine Learning module
+│   │   ├── dataset.py               # Dataset loading & preprocessing
+│   │   ├── features.py              # Feature engineering
+│   │   ├── trainer.py               # Model training (LR, RF, XGBoost)
+│   │   ├── predictor.py             # Model inference + SHAP explanation
+│   │   └── risk_scorer.py           # Risk score calculation
+│   │
+│   ├── ocr/                          # OCR module
+│   │   ├── preprocessor.py          # Image preprocessing for OCR
+│   │   ├── extractor.py             # Text extraction (PyMuPDF + Tesseract)
+│   │   ├── parser.py                # Financial data parsing (parse_financials)
+│   │   └── annual_report_analyzer.py # Annual report section detection
+│   │
+│   ├── ratios/                       # Financial Ratios module
+│   │   ├── calculator.py            # Ratio computation (20+ ratios)
+│   │   └── interpreter.py           # Ratio interpretation & health scoring
+│   │
+│   ├── rules/                        # Rule Engine module
+│   │   └── engine.py                # Rule evaluation against ratios
+│   │
+│   ├── reports/                      # Report Generation module
+│   │   └── builder.py               # PDF credit report builder (ReportLab)
+│   │
+│   ├── tests/                        # Test suite
+│   │   ├── conftest.py              # Test fixtures, DB setup
+│   │   ├── test_auth.py
+│   │   ├── test_applications.py
+│   │   ├── test_companies.py
+│   │   ├── test_health.py
+│   │   ├── test_rules_api.py
+│   │   ├── test_rules_engine.py
+│   │   ├── test_users.py
+│   │   └── test_analytics.py
+│   │
+│   ├── training/                     # ML training scripts
+│   └── workers/                      # Celery background workers
+│
+├── frontend/
+│   ├── package.json                  # Node dependencies
+│   ├── vite.config.ts                # Vite config + API proxy
+│   ├── tsconfig.json                 # TypeScript config
+│   ├── tailwind.config.js            # TailwindCSS config
+│   │
+│   └── src/
+│       ├── main.tsx                  # React entry point
+│       ├── App.tsx                   # Root component + routes
+│       ├── vite-env.d.ts             # Vite type declarations
+│       │
+│       ├── api/                      # API client modules
+│       │   ├── client.ts            # Axios instance, interceptors, token handling
+│       │   ├── auth.ts              # login, register, me, logout, changePassword
+│       │   ├── portal.ts            # Company portal: dashboard, apps, docs, annual report
+│       │   ├── applications.ts      # Application CRUD
+│       │   ├── companies.ts         # Company CRUD
+│       │   ├── documents.ts         # Document upload/list
+│       │   ├── ocr.ts               # OCR extraction trigger
+│       │   ├── ratios.ts            # Ratio calculation
+│       │   ├── rules.ts             # Rule CRUD
+│       │   ├── predictions.ts       # ML prediction trigger
+│       │   ├── reports.ts           # Report generation/download
+│       │   ├── pipeline.ts          # Full pipeline trigger
+│       │   ├── analytics.ts         # Dashboard analytics
+│       │   └── users.ts             # User management
+│       │
+│       ├── store/
+│       │   └── auth.ts              # Zustand auth store (token: access_token)
+│       │
+│       ├── types/
+│       │   └── index.ts             # TypeScript interfaces
+│       │
+│       ├── lib/
+│       │   └── theme.ts             # Theme management
+│       │
+│       ├── components/
+│       │   ├── ErrorBoundary.tsx
+│       │   ├── layout/
+│       │   │   ├── AppLayout.tsx     # Bank/Admin layout (sidebar + topbar)
+│       │   │   ├── CompanyLayout.tsx # Company portal layout (top nav)
+│       │   │   ├── Sidebar.tsx       # Bank dashboard sidebar
+│       │   │   └── TopBar.tsx        # Bank dashboard top bar
+│       │   └── ui/
+│       │       ├── Badge.tsx
+│       │       ├── Button.tsx
+│       │       ├── EmptyState.tsx
+│       │       ├── Input.tsx
+│       │       ├── Modal.tsx
+│       │       ├── PageHeader.tsx
+│       │       ├── Spinner.tsx
+│       │       ├── StatCard.tsx
+│       │       ├── Table.tsx
+│       │       ├── ThemeToggle.tsx
+│       │       └── Toast.tsx
+│       │
+│       └── pages/
+│           ├── landing/Landing.tsx         # Public landing page
+│           ├── auth/
+│           │   ├── Login.tsx              # 3-portal login selector
+│           │   └── Register.tsx           # Company registration (3 steps)
+│           │
+│           ├── portal/                    # COMPANY PORTAL pages
+│           │   ├── PortalDashboard.tsx     # Company dashboard
+│           │   ├── PortalApplications.tsx  # List company applications
+│           │   ├── PortalApplicationDetail.tsx # Application detail + timeline
+│           │   ├── PortalAnnualReport.tsx  # Annual report upload & analysis
+│           │   ├── PortalDocuments.tsx     # Document listing (view-only)
+│           │   └── PortalCompany.tsx       # Company profile
+│           │
+│           ├── dashboard/Dashboard.tsx     # BANK dashboard (admin/officer)
+│           ├── companies/
+│           │   ├── Companies.tsx           # Company list
+│           │   └── CompanyDetail.tsx       # Company detail
+│           ├── applications/
+│           │   ├── Applications.tsx        # Application list
+│           │   ├── NewApplication.tsx      # Create application
+│           │   └── ApplicationDetail.tsx   # Application detail + pipeline
+│           ├── rules/RuleEngine.tsx        # Rule management
+│           ├── predictions/MLModels.tsx    # ML model info & predictions
+│           ├── analytics/Analytics.tsx     # Analytics dashboard
+│           ├── pipeline/Pipeline.tsx       # Pipeline management
+│           └── settings/Settings.tsx       # User settings
+
+
+================================================================================
+7. DATABASE SCHEMA (PostgreSQL)
+================================================================================
+
+All tables have: id (UUID PK), created_at, updated_at (auto-managed)
+
+TABLE: users
+  - email (VARCHAR 255, unique, indexed)
+  - full_name (VARCHAR 255)
+  - hashed_password (VARCHAR 255)
+  - role (ENUM: admin, officer, analyst, viewer, company)
+  - status (ENUM: active, inactive, suspended)
+  - department (VARCHAR 100, nullable)
+  - phone (VARCHAR 20, nullable)
+  - is_verified (BOOLEAN)
+  - last_login (VARCHAR 50, nullable)
+  - profile_notes (TEXT, nullable)
+  - company_id (FK → companies.id, nullable) — links company users to their company
+
+TABLE: companies
+  - name (VARCHAR 255, indexed)
+  - registration_number (VARCHAR 100, unique)
+  - tax_id (VARCHAR 50, nullable)
+  - gst_number (VARCHAR 50, nullable)
+  - company_type (ENUM: private_limited, public_limited, partnership, sole_proprietorship, llp, other)
+  - industry (ENUM: manufacturing, retail, wholesale, services, technology, healthcare, construction, real_estate, agriculture, financial, hospitality, transportation, energy, other)
+  - status (ENUM: active, under_review, suspended, closed)
+  - incorporation_date (VARCHAR 20, nullable)
+  - country_of_incorporation (VARCHAR 100, default "India")
+  - registered_address (TEXT, nullable)
+  - city, state, postal_code
+  - contact_email, contact_phone, website
+  - annual_turnover (NUMERIC 18,2, nullable)
+  - number_of_employees (INTEGER, nullable)
+  - notes (TEXT, nullable)
+
+TABLE: loan_applications
+  - application_number (VARCHAR 50, unique, indexed)
+  - company_id (FK → companies.id, CASCADE)
+  - assigned_officer_id (FK → users.id, SET NULL, nullable)
+  - loan_amount_requested (NUMERIC 18,2)
+  - loan_purpose (ENUM: working_capital, capital_expenditure, debt_refinancing, expansion, acquisition, trade_finance, other)
+  - loan_tenure_months (INTEGER)
+  - interest_rate_requested (NUMERIC 6,4, nullable)
+  - collateral_description (TEXT, nullable)
+  - collateral_value (NUMERIC 18,2, nullable)
+  - status (ENUM: draft, submitted, under_review, ocr_processing, ocr_complete, ratio_calculated, rule_evaluated, ml_predicted, report_generated, approved, rejected, manual_review, withdrawn)
+  - ocr_completed, ratios_calculated, rules_evaluated, ml_predicted, report_generated (BOOLEAN pipeline flags)
+  - final_decision (ENUM: approved, rejected, manual_review, pending)
+  - decision_reason (TEXT, nullable)
+  - officer_notes (TEXT, nullable)
+  - risk_score (NUMERIC 5,2, nullable)
+
+TABLE: documents
+  - application_id (FK → loan_applications.id, CASCADE)
+  - document_type (ENUM: balance_sheet, profit_loss, cash_flow, annual_report, auditor_report, gst_report, bank_statement, other)
+  - status (ENUM: uploaded, processing, extracted, failed)
+  - original_filename, stored_filename, file_path, file_size_bytes, mime_type
+  - checksum_sha256 (nullable)
+  - financial_year (VARCHAR 20, nullable)
+  - processing_error (TEXT, nullable)
+  - parent_document_id (FK → documents.id, self-referencing, SET NULL, nullable) — for annual report sub-documents
+  - page_range_start, page_range_end (INTEGER, nullable) — page boundaries for extracted sections
+  - ocr_processed (BOOLEAN)
+
+TABLE: ocr_data
+  - document_id (FK → documents.id, CASCADE, unique)
+  - raw_text (TEXT, nullable)
+  - confidence_score (FLOAT, nullable)
+  - page_count (INTEGER, nullable)
+  - extracted_fields (JSONB, nullable) — parsed financial fields
+  - extraction_metadata (JSONB, nullable)
+
+TABLE: financial_ratios
+  - application_id (FK → loan_applications.id, CASCADE, unique)
+  - financial_year (VARCHAR 20, nullable)
+  - extracted_financials (JSONB, nullable) — raw financial data used
+  - ratios (JSONB, nullable) — computed ratio values
+  - overall_health (VARCHAR 50, nullable) — e.g., "healthy", "warning", "critical"
+  - health_notes (TEXT, nullable)
+  - calculation_metadata (JSONB, nullable)
+
+TABLE: predictions
+  - application_id (FK → loan_applications.id, CASCADE)
+  - model_used (ENUM: logistic_regression, random_forest, xgboost)
+  - model_version (VARCHAR 50, nullable)
+  - probability_of_default (NUMERIC)
+  - outcome (ENUM: approved, rejected, manual_review, error)
+  - risk_score (NUMERIC 5,2)
+  - risk_level (ENUM: low, medium, high, critical)
+  - shap_values (JSONB, nullable) — per-feature SHAP explanations
+  - feature_importance (JSONB, nullable)
+  - explanation_text (TEXT, nullable)
+  - input_features (JSONB, nullable)
+  - model_metrics (JSONB, nullable)
+  - recommendation (TEXT, nullable)
+  - ml_executed (BOOLEAN)
+  - skip_reason (TEXT, nullable)
+
+TABLE: credit_reports
+  - application_id (FK → loan_applications.id, CASCADE)
+  - status (ENUM: generating, completed, failed)
+  - filename (VARCHAR 255, unique)
+  - file_path (VARCHAR 500)
+  - file_size_bytes (BIGINT, nullable)
+  - version (INTEGER, default 1)
+  - generated_by (VARCHAR 255, nullable)
+  - generation_error (TEXT, nullable)
+
+TABLE: rules
+  - name (VARCHAR 200, unique)
+  - description (TEXT, nullable)
+  - category (ENUM: liquidity, profitability, leverage, efficiency, coverage, size, custom)
+  - metric_field (VARCHAR 100) — e.g., "current_ratio", "debt_to_equity"
+  - operator (ENUM: gt, gte, lt, lte, eq, neq, between, in_range)
+  - threshold (NUMERIC 18,6, nullable)
+  - action (ENUM: pass, flag, reject, warning)
+  - is_mandatory (BOOLEAN)
+  - is_active (BOOLEAN)
+  - priority (INTEGER, default 100)
+  - failure_message, pass_message (TEXT, nullable)
+  - industry (ENUM, nullable) — industry-specific rules
+  - extra_config (JSONB, nullable)
+
+TABLE: audit_logs
+  - action (ENUM: various audit actions)
+  - description (TEXT)
+  - user_id (FK → users.id, nullable)
+  - entity_type, entity_id
+  - old_values, new_values (JSONB, nullable)
+  - ip_address, user_agent, request_id
+
+
+================================================================================
+8. API ENDPOINTS (all under /api/v1)
+================================================================================
+
+AUTHENTICATION (/auth):
+  POST   /auth/register           — Company self-registration (public)
+  POST   /auth/login              — Login (returns JWT)
+  GET    /auth/me                 — Current user profile
+  POST   /auth/change-password    — Change own password
+  POST   /auth/logout             — Logout
+
+USERS (/users) — Admin only:
+  GET    /users                   — List users (paginated)
+  POST   /users                   — Create user
+  GET    /users/{id}              — Get user detail
+  PUT    /users/{id}              — Update user
+  PATCH  /users/{id}/status       — Change user status
+  PATCH  /users/{id}/role         — Change user role
+  DELETE /users/{id}              — Delete user
+  POST   /users/{id}/reset-password — Admin reset password
+
+COMPANIES (/companies):
+  GET    /companies               — List companies (paginated)
+  POST   /companies               — Create company
+  GET    /companies/{id}          — Get company detail
+  PUT    /companies/{id}          — Update company
+  DELETE /companies/{id}          — Delete company
+  GET    /companies/{id}/applications — List company's applications
+
+APPLICATIONS (/applications):
+  GET    /applications            — List applications (paginated, filterable)
+  POST   /applications            — Create application
+  GET    /applications/{id}       — Get application detail
+  GET    /applications/{id}/status — Pipeline status
+  PUT    /applications/{id}       — Update application
+  POST   /applications/{id}/submit — Submit for processing
+  PATCH  /applications/{id}/decision — Set final decision
+  POST   /applications/{id}/notes — Add officer notes
+  POST   /applications/{id}/assign — Assign to officer
+
+DOCUMENTS (/documents):
+  POST   /documents/upload/{app_id} — Upload document
+  GET    /documents                  — List documents
+  GET    /documents/{id}             — Get document detail
+  GET    /documents/application/{app_id} — Documents for application
+  PATCH  /documents/{id}             — Update document metadata
+  DELETE /documents/{id}             — Delete document
+  GET    /documents/{id}/download    — Download file
+
+OCR (/ocr):
+  POST   /ocr/extract/{doc_id}    — Trigger OCR extraction
+  GET    /ocr/{doc_id}            — Get OCR results
+  GET    /ocr/{doc_id}/fields     — Get extracted fields
+  POST   /ocr/batch/{app_id}      — Batch OCR for all docs in application
+
+FINANCIAL RATIOS (/ratios):
+  POST   /ratios/calculate/{app_id} — Calculate ratios
+  GET    /ratios/{app_id}           — Get ratio results
+  GET    /ratios/{app_id}/interpret  — Get ratio interpretation
+
+RULE ENGINE (/rules):
+  GET    /rules                   — List rules (filterable by category/industry)
+  POST   /rules                   — Create rule
+  GET    /rules/{id}              — Get rule detail
+  PUT    /rules/{id}              — Update rule
+  PATCH  /rules/{id}/toggle       — Activate/deactivate rule
+  DELETE /rules/{id}              — Delete rule
+  POST   /rules/evaluate/{app_id} — Evaluate rules against application
+  GET    /rules/results/{app_id}  — Get rule evaluation results
+
+ML PREDICTIONS (/predictions):
+  POST   /predictions/predict/{app_id} — Run ML prediction
+  GET    /predictions/{app_id}         — Get prediction results
+  POST   /predictions/retrain          — Retrain models
+  GET    /predictions/models           — List available models
+  GET    /predictions/{app_id}/explain — SHAP explanation
+
+REPORTS (/reports):
+  POST   /reports/generate/{app_id} — Generate PDF credit report
+  GET    /reports/{app_id}          — List reports for application
+  GET    /reports/{app_id}/latest   — Get latest report
+  GET    /reports/{id}/download     — Download report PDF
+
+ANALYTICS (/analytics):
+  GET    /analytics/dashboard      — Dashboard overview stats
+  GET    /analytics/applications   — Application analytics
+  GET    /analytics/risk           — Risk distribution
+  GET    /analytics/pipeline       — Pipeline performance
+  GET    /analytics/decisions      — Decision analytics
+  GET    /analytics/trends         — Time-based trends
+  GET    /analytics/models         — Model performance metrics
+  GET    /analytics/rules          — Rule effectiveness
+
+PIPELINE (/pipeline):
+  GET    /pipeline/{app_id}/status  — Full pipeline status
+  POST   /pipeline/{app_id}/run     — Run full pipeline (OCR→ratios→rules→ML→report)
+  POST   /pipeline/{app_id}/step    — Run single pipeline step
+
+COMPANY PORTAL (/portal) — Company role only:
+  GET    /portal/dashboard         — Company dashboard stats
+  GET    /portal/company           — View own company profile
+  GET    /portal/applications      — List own applications
+  POST   /portal/applications      — Create own loan application
+  GET    /portal/applications/{id} — Application detail + timeline
+  GET    /portal/documents         — List all company documents
+  POST   /portal/documents/upload/{app_id} — Upload document
+  POST   /portal/annual-report/upload/{app_id} — Upload annual report
+  POST   /portal/annual-report/analyze/{doc_id} — Analyze annual report
+  GET    /portal/annual-report/status/{doc_id}  — Analysis status
+
+
+================================================================================
+9. FRONTEND ROUTES
+================================================================================
+
+PUBLIC:
+  /                       — Landing page
+  /login                  — Login (3-portal selector: Company, Bank, Admin)
+  /register               — Company registration (3 steps)
+
+COMPANY PORTAL (CompanyLayout):
+  /portal                 — Company dashboard
+  /portal/applications    — My applications list
+  /portal/applications/:id — Application detail
+  /portal/annual-report   — Annual report upload & analysis (PRIMARY upload page)
+  /portal/documents       — Document listing (accessible but not in nav)
+  /portal/company         — Company profile
+
+BANK/ADMIN (AppLayout with Sidebar):
+  /dashboard              — Bank dashboard (stats, recent apps)
+  /companies              — Company management
+  /companies/:id          — Company detail
+  /applications           — Application management
+  /applications/new       — Create new application
+  /applications/:id       — Application detail + pipeline
+  /rules                  — Rule engine management
+  /predictions            — ML models & predictions
+  /analytics              — Analytics dashboard
+  /pipeline               — Pipeline management
+  /settings               — User settings
+
+
+================================================================================
+10. DESIGN SYSTEM
+================================================================================
+
+COLOR SCHEME:
+  Primary (Coral-Orange): #EF6C1A
+  CSS Variables: --cr-50 through --cr-900 (coral orange scale)
+  Gradient: gradient-orange class (linear gradient using coral-orange tones)
+  Dark theme default, light theme supported (theme toggle)
+
+TYPOGRAPHY:
+  Heading/Mono: JetBrains Mono
+  Body: Inter
+  Font sizes: text-h1, text-h2, text-h3, text-small, text-caption
+
+UI CLASSES:
+  .card         — Rounded card with border
+  .btn          — Base button
+  .btn-primary  — Coral-orange gradient button
+  .btn-secondary — Ghost/outline button
+  .input        — Form input styling
+  .label        — Form label styling
+  .gradient-orange — Orange gradient background
+
+LAYOUT:
+  Company Portal: Top navigation bar (CompanyLayout)
+  Bank/Admin: Left sidebar + top bar (AppLayout)
+  Max content width: 1100px (company portal)
+
+
+================================================================================
+11. PROCESSING PIPELINE (End-to-End)
+================================================================================
+
+The automated pipeline processes a loan application through these stages:
+
+1. DOCUMENT UPLOAD
+   - Company uploads annual report PDF (up to 100 MB)
+   - Stored in uploads/ directory with SHA256 checksum
+   - Document record created in DB with status "uploaded"
+
+2. ANNUAL REPORT ANALYSIS (for annual_report type)
+   - Analyzes PDF to detect Table of Contents (TOC)
+   - If TOC found: parses TOC entries to find financial statement page numbers
+   - If no TOC: keyword scan across all pages
+   - Detects 3 section types: Balance Sheet, Profit & Loss, Cash Flow Statement
+   - Distinguishes Standalone vs Consolidated (prefers Standalone for lending)
+   - Detects monetary units (crore/lakh/million) and financial year
+   - Creates sub-document records per detected section
+   - MAX_SECTION_PAGES = 8 per financial statement
+
+3. OCR EXTRACTION
+   - For each section/document:
+     - PyMuPDF extracts native text first
+     - Falls back to Tesseract OCR if native text is insufficient
+     - OpenCV preprocessing for scanned documents
+   - parse_financials() extracts structured financial fields:
+     - Total Revenue, Net Profit, Total Assets, Total Liabilities
+     - Current Assets, Current Liabilities, Shareholders Equity
+     - Operating Profit, EBITDA, Depreciation, Interest Expense
+     - Cash from Operations/Investing/Financing
+     - Inventory, Trade Receivables, Trade Payables
+     - Long Term Debt, Short Term Debt, etc.
+   - For annual reports: merges best-confidence fields from all sections
+
+4. FINANCIAL RATIO CALCULATION
+   - Computes 20+ ratios from extracted financial data:
+     - Liquidity: Current Ratio, Quick Ratio, Cash Ratio
+     - Profitability: Net Profit Margin, ROA, ROE, Operating Margin
+     - Leverage: Debt-to-Equity, Debt-to-Assets, Interest Coverage
+     - Efficiency: Asset Turnover, Inventory Turnover, Receivable Days
+     - Coverage: DSCR, Times Interest Earned
+   - Generates overall health assessment (healthy/warning/critical)
+
+5. RULE ENGINE EVALUATION
+   - Evaluates application against active rules
+   - Rules are configurable (CRUD in admin)
+   - Industry-specific rules supported
+   - Each rule: metric_field + operator + threshold → pass/flag/reject/warning
+   - Mandatory vs optional rules
+   - Priority-based execution order
+
+6. ML PREDICTION
+   - XGBoost is the PRIMARY model (forced as default)
+   - Also available: Logistic Regression, Random Forest
+   - Dataset: company_bankruptcy_prediction.csv
+   - SMOTE oversampling for class imbalance
+   - Outputs: probability_of_default, risk_score (0-100), risk_level
+   - SHAP values for explainability (per-feature contribution)
+   - Auto-generates final decision: APPROVED/REJECTED/MANUAL_REVIEW
+
+7. CREDIT REPORT GENERATION
+   - PDF report generated using ReportLab
+   - Contains: company info, financial summary, ratios, rule results,
+     ML prediction, SHAP explanation, risk assessment, recommendation
+   - Stored in reports/ directory
+   - Versioned (v1, v2, etc.)
+
+AUTOMATIC DECISION LOGIC:
+  - risk_score < 35 → APPROVED
+  - risk_score > 65 → REJECTED
+  - 35 ≤ risk_score ≤ 65 → MANUAL_REVIEW
+
+
+================================================================================
+12. ML MODULE DETAILS
+================================================================================
+
+DATASET:
+  - File: datasets/company_bankruptcy_prediction.csv
+  - Configurable via DATASET_PATH in .env
+
+MODELS:
+  - XGBoost (PRIMARY — forced as default)
+  - Random Forest
+  - Logistic Regression
+
+TRAINING (backend/ml/trainer.py):
+  - Train/test split: 80/20 (configurable via TEST_SIZE)
+  - Cross-validation: 5-fold (configurable via CV_FOLDS)
+  - SMOTE oversampling for imbalanced classes
+  - Feature scaling: StandardScaler
+  - Random state: 42 (configurable)
+  - Models saved to models/ directory with metadata.json
+
+PREDICTION (backend/ml/predictor.py):
+  - Loads trained model from models/ directory
+  - Generates probability_of_default
+  - Computes SHAP values for explainability
+  - Generates risk_score (0-100 scale)
+  - Determines risk_level: low (<30), medium (30-60), high (60-80), critical (>80)
+
+FEATURES (backend/ml/features.py):
+  - Feature engineering from extracted financial ratios
+  - Feature configuration in config/feature_config.json
+
+
+================================================================================
+13. OCR MODULE DETAILS
+================================================================================
+
+PREPROCESSOR (backend/ocr/preprocessor.py):
+  - Grayscale conversion
+  - Noise removal (bilateral filter)
+  - Thresholding (adaptive/Otsu)
+  - Deskewing
+  - DPI adjustment
+
+EXTRACTOR (backend/ocr/extractor.py):
+  - Primary: PyMuPDF native text extraction
+  - Fallback: Tesseract OCR on image-converted pages
+  - Page-by-page extraction
+  - Confidence scoring
+
+PARSER (backend/ocr/parser.py):
+  - parse_financials(text) → dict of financial fields
+  - Regex-based extraction of amounts
+  - Handles Indian number formats (crore, lakh)
+  - Handles parenthetical negatives
+  - Maps various labels to standard field names
+
+ANNUAL REPORT ANALYZER (backend/ocr/annual_report_analyzer.py):
+  - analyze_annual_report(file_path) → AnalysisResult
+  - TOC detection and parsing
+  - Financial section detection via keyword patterns
+  - Standalone vs Consolidated detection
+  - Monetary unit detection (crore/lakh/million)
+  - Company name and financial year extraction
+  - Per-section confidence scoring
+  - Key classes: SectionType, StatementVariant, DetectedSection, AnalysisResult
+
+
+================================================================================
+14. AUTHENTICATION & AUTHORIZATION
+================================================================================
+
+METHOD: JWT Bearer Token (stateless)
+ALGORITHM: HS256
+TOKEN STORAGE: localStorage key "access_token"
+TOKEN HEADER: Authorization: Bearer <token>
+
+ROLES (5):
+  1. admin    — Full platform access, user management
+  2. officer  — Application management, decisions
+  3. analyst  — Read-only analysis access
+  4. viewer   — Read-only view access
+  5. company  — Company portal access only
+
+ROLE ENFORCEMENT:
+  - Backend: dependencies.py has role-checking dependency injections
+  - Frontend: Route guards in CompanyLayout (role=company) and AppLayout (other roles)
+  - 401 interceptor: clears token and redirects to /login on unauthorized
+
+REGISTRATION FLOW:
+  1. Company fills 3-step form (Company Details → Account Setup → Review)
+  2. Backend creates Company + User (role=COMPANY) in one transaction
+  3. Returns JWT token immediately (auto-login)
+  4. Company lands on portal dashboard
+  5. Company creates loan application from Annual Report page
+  6. Company uploads annual report PDF
+
+
+================================================================================
+15. GIT HISTORY
+================================================================================
+
+1fa5b1a fix: simplify registration, add self-service application creation, annual-report-only upload
+dbe20e5 feat: annual report processing pipeline — auto-detect financial sections from PDFs
+ab83834 feat: professional overhaul — unified colors, company docs, clean bank dashboard
+7d24c51 feat: redesign login portal selector — split-screen professional layout
+34251e5 feat: multi-portal platform — company registration, portal, admin dashboard
+4523220 feat: XGBoost as primary model + auto final-decision pipeline
+f8d6203 fix: correct test fixtures and exception handler
+ac1949c feat: initial commit — Corporate Lending Automation (CLA)
+
+
+================================================================================
+16. KEY ARCHITECTURAL PATTERNS
+================================================================================
+
+BACKEND ARCHITECTURE: Layered Architecture
+  API Routes → Services → Repositories → Models
+  - Routes: Thin controllers, request validation, response formatting
+  - Services: Business logic, orchestration, transactions
+  - Repositories: Data access, queries, CRUD operations
+  - Models: ORM definitions, relationships, enums
+
+FRONTEND ARCHITECTURE:
+  Pages → API Client → Zustand Store
+  - Pages: Full page components with local state
+  - API Client: Axios-based modules per domain
+  - Store: Zustand for auth state (minimal global state)
+  - Forms: React Hook Form for complex forms
+
+DATABASE:
+  - UUID primary keys everywhere
+  - Auto-managed created_at/updated_at timestamps (via SQLAlchemy Base mixin)
+  - JSONB fields for flexible data (extracted_fields, ratios, shap_values)
+  - Cascading deletes where appropriate
+  - Indexes on frequently queried columns
+
+ERROR HANDLING:
+  - Custom exception classes (AuthenticationError, NotFoundError, ConflictError, etc.)
+  - Global exception handler middleware
+  - Structured error responses: { success: false, error: { code, message, status, detail } }
+  - Frontend: extractError() utility for consistent error display
+
+SECURITY:
+  - JWT authentication with configurable expiry
+  - Password hashing with bcrypt (via passlib)
+  - Password strength validation (min 8 chars, uppercase, number)
+  - CORS configuration (allowed origins in .env)
+  - Rate limiting (60 req/min via slowapi)
+  - File upload validation (size, type)
+  - SQL injection prevention (SQLAlchemy ORM)
+  - Request ID tracking for audit trail
+  - Audit logging for sensitive operations
+
+
+================================================================================
+17. IMPORTANT NOTES FOR CONTINUATION
+================================================================================
+
+DO NOT:
+  - Rebuild the project from scratch
+  - Change the existing architecture unnecessarily
+  - Hardcode absolute file paths (use pathlib/os.path)
+  - Generate demo/prototype code — everything must be production-quality
+  - Change the primary ML model from XGBoost
+  - Change the coral-orange (#EF6C1A) design theme
+  - Change the auth token key from "access_token"
+
+REMEMBER:
+  - Database password is "sujan" (PostgreSQL)
+  - XGBoost is forced as the primary model
+  - The platform has 3 portals (Company, Bank, Admin)
+  - Company users upload ONLY annual reports (not individual financial statements)
+  - The system auto-detects Balance Sheet, P&L, Cash Flow from the annual report
+  - All paths should be relative/configurable via .env
+  - The frontend uses Vite proxy (/api/* → localhost:8000)
+  - Auth store uses "access_token" key in localStorage (NOT "token")
+
+POSSIBLE NEXT STEPS:
+  - Test with a real annual report PDF end-to-end
+  - Add email notifications for application status changes
+  - Implement Redis caching for frequently accessed data
+  - Add Celery background workers for async processing
+  - Deploy to production (Docker, AWS/GCP)
+  - Add more comprehensive test coverage
+  - Implement forgot password / email verification
+  - Add batch processing for multiple annual reports
+  - Dashboard charts and analytics improvements
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================

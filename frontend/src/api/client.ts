@@ -29,6 +29,7 @@ export function extractError(err: unknown): string {
     const data = err.response?.data
     if (typeof data?.detail === 'string') return data.detail
     if (Array.isArray(data?.detail)) return data.detail.map((d: { msg: string }) => d.msg).join(', ')
+    if (data?.error?.message) return data.error.message
     if (data?.message) return data.message
     return err.message
   }

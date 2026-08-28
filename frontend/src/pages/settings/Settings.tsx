@@ -21,9 +21,10 @@ const ROLES: { value: UserRole; label: string }[] = [
 ]
 
 interface PasswordForm { current_password: string; new_password: string; confirm_password: string }
+interface EmailForm { email: string }
 
 export default function Settings() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const [users, setUsers] = useState<User[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [userModalOpen, setUserModalOpen] = useState(false)
@@ -32,6 +33,7 @@ export default function Settings() {
 
   const pwForm = useForm<PasswordForm>()
   const userForm = useForm<UserCreate>()
+  const emailForm = useForm<EmailForm>({ defaultValues: { email: user?.email ?? '' } })
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -41,6 +43,22 @@ export default function Settings() {
       setLoadingUsers(false)
     }
   }, [user])
+
+  const onChangeEmail = async (values: EmailForm) => {
+    const newEmail = values.email.trim().toLowerCase()
+    if (!newEmail || newEmail === user?.email?.toLowerCase()) {
+      emailForm.setError('email', { message: 'Enter a different email address.' })
+      return
+    }
+    try {
+      const updated = await usersApi.updateMe({ email: newEmail })
+      setUser(updated)
+      emailForm.reset({ email: updated.email })
+      success('Email address updated.')
+    } catch (err) {
+      error(extractError(err))
+    }
+  }
 
   const onChangePassword = async (values: PasswordForm) => {
     if (values.new_password !== values.confirm_password) {
@@ -119,6 +137,30 @@ export default function Settings() {
             <Badge variant="approved" dot>Active</Badge>
           </div>
         </div>
+      </div>
+
+      {/* Change email */}
+      <div className="card p-5 mb-6">
+        <h3 className="text-h4 mb-1 font-mono">Change Email</h3>
+        <p className="text-caption text-ink-muted mb-4">
+          Update the email address used to sign in and receive notifications.
+        </p>
+        <form onSubmit={emailForm.handleSubmit(onChangeEmail)} className="flex flex-col gap-4">
+          <Input
+            label="Email Address"
+            type="email"
+            error={emailForm.formState.errors.email?.message}
+            {...emailForm.register('email', {
+              required: 'Required.',
+              pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email address.' },
+            })}
+          />
+          <div className="flex justify-end">
+            <Button type="submit" loading={emailForm.formState.isSubmitting}>
+              Update Email
+            </Button>
+          </div>
+        </form>
       </div>
 
       {/* Change password */}
