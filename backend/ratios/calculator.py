@@ -150,7 +150,7 @@ def working_capital(f: Dict) -> RatioResult:
         value=round(wc, 2) if wc is not None else None,
         formula="Current Assets − Current Liabilities",
         components={"current_assets": ca, "current_liabilities": cl},
-        unit="RM",
+        unit="INR",
     )
 
 

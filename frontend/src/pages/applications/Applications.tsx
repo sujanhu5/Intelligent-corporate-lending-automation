@@ -70,7 +70,7 @@ export default function Applications() {
       ),
     },
     {
-      key: 'amount', header: 'Amount (RM)', className: 'text-right',
+      key: 'amount', header: 'Amount (₹)', className: 'text-right',
       render: (a: Application) => (
         <span className="tabular">
           {a.loan_amount_requested.toLocaleString(undefined, { minimumFractionDigits: 0 })}

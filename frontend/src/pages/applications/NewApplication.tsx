@@ -72,7 +72,7 @@ export default function NewApplication() {
 
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="Loan Amount Requested (RM)"
+            label="Loan Amount Requested (₹)"
             type="number"
             step="any"
             placeholder="e.g. 1200000"
@@ -80,7 +80,7 @@ export default function NewApplication() {
             {...register('loan_amount_requested', {
               required: 'Required.',
               valueAsNumber: true,
-              min: { value: 10000, message: 'Minimum RM 10,000.' },
+              min: { value: 10000, message: 'Minimum ₹10,000.' },
             })}
           />
           <Input
@@ -121,7 +121,7 @@ export default function NewApplication() {
         />
 
         <Input
-          label="Collateral Value (RM)"
+          label="Collateral Value (₹)"
           type="number"
           step="any"
           placeholder="Estimated market value"

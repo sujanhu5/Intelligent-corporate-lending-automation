@@ -140,7 +140,7 @@ export default function Companies() {
       key: 'turnover', header: 'Annual Turnover', className: 'text-right',
       render: (c: Company) => (
         <span className="font-mono font-semibold tabular text-ink-primary">
-          {c.annual_turnover ? `RM ${(c.annual_turnover / 1_000_000).toFixed(2)}M` : '—'}
+          {c.annual_turnover ? `₹${(c.annual_turnover / 1_000_000).toFixed(2)}M` : '—'}
         </span>
       ),
     },
@@ -222,7 +222,7 @@ export default function Companies() {
           <Input label="Contact Email" type="email" error={errors.contact_email?.message}
             {...register('contact_email', { required: 'Required.' })} />
           <Input label="Contact Phone" {...register('contact_phone')} />
-          <Input label="Annual Turnover (RM)" type="number" step="any"
+          <Input label="Annual Turnover (₹)" type="number" step="any"
             {...register('annual_turnover', { valueAsNumber: true })} />
           <Input label="Number of Employees" type="number"
             {...register('number_of_employees', { valueAsNumber: true })} />

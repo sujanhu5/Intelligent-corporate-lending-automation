@@ -145,12 +145,12 @@ def _interpret_current_asset_ratio(v: float) -> RatioInterpretation:
 
 def _interpret_working_capital(v: float) -> RatioInterpretation:
     if v < 0:
-        risk, text = "very_high", f"Critical: Negative Working Capital of RM {v:,.0f}. Current liabilities exceed current assets — immediate liquidity concern."
+        risk, text = "very_high", f"Critical: Negative Working Capital of INR {v:,.0f}. Current liabilities exceed current assets — immediate liquidity concern."
     elif v == 0:
         risk, text = "high", "Borderline: Working Capital is zero. No buffer for unexpected short-term obligations."
     else:
-        risk, text = "low", f"Positive: Working Capital of RM {v:,.0f} provides a buffer for short-term operations."
-    return RatioInterpretation("working_capital", "Working Capital", v, "RM", "Current Assets − Current Liabilities", risk, _signal(risk), text, None, None, "Positive = healthy; negative = risk")
+        risk, text = "low", f"Positive: Working Capital of INR {v:,.0f} provides a buffer for short-term operations."
+    return RatioInterpretation("working_capital", "Working Capital", v, "INR", "Current Assets − Current Liabilities", risk, _signal(risk), text, None, None, "Positive = healthy; negative = risk")
 
 
 def _interpret_gross_profit_margin(v: float) -> RatioInterpretation:

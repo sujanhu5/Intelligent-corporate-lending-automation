@@ -109,7 +109,7 @@ export default function CompanyDetail() {
             <Row label="Email" value={company.contact_email} />
             <Row label="Phone" value={company.contact_phone} />
             <Row label="Annual Turnover"
-              value={company.annual_turnover ? `RM ${company.annual_turnover.toLocaleString()}` : null} />
+              value={company.annual_turnover ? `₹${company.annual_turnover.toLocaleString()}` : null} />
             <Row label="Employees" value={company.number_of_employees?.toLocaleString()} />
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function CompanyDetail() {
             <table className="w-full border-collapse text-small">
               <thead className="bg-surface-2">
                 <tr>
-                  {['Application No.', 'Amount (RM)', 'Purpose', 'Tenure', 'Risk Score', 'Status'].map(h => (
+                  {['Application No.', 'Amount (₹)', 'Purpose', 'Tenure', 'Risk Score', 'Status'].map(h => (
                     <th key={h} className="px-4 py-2.5 text-left text-caption text-ink-secondary border-b border-border font-bold uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>

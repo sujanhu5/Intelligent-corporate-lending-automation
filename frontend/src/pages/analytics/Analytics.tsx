@@ -85,7 +85,7 @@ export default function Analytics() {
     { name: 'Pending',       value: summary.total_pending       },
   ].filter(d => d.value > 0) : []
 
-  const fmtRM = (n: number) => `RM ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+  const fmtRM = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
   return (
     <div>

@@ -275,12 +275,12 @@ export default function ApplicationDetail() {
           <div className="card p-5">
             <h3 className="text-h4 mb-3">Loan Details</h3>
             {[
-              ['Amount Requested', `RM ${app.loan_amount_requested.toLocaleString()}`],
+              ['Amount Requested', `₹${app.loan_amount_requested.toLocaleString('en-IN')}`],
               ['Purpose',          app.loan_purpose.replace(/_/g, ' ')],
               ['Tenure',           `${app.loan_tenure_months} months`],
               ['Interest Rate',    app.interest_rate_requested ? `${app.interest_rate_requested}%` : '—'],
               ['Collateral',       app.collateral_description ?? '—'],
-              ['Collateral Value', app.collateral_value ? `RM ${app.collateral_value.toLocaleString()}` : '—'],
+              ['Collateral Value', app.collateral_value ? `₹${app.collateral_value.toLocaleString('en-IN')}` : '—'],
               ['Risk Score',       app.risk_score != null ? app.risk_score.toFixed(1) : '—'],
               ['Decision',         app.final_decision],
             ].map(([label, value]) => (
@@ -535,7 +535,7 @@ function OCRTab({ appId }: { appId: string }) {
             <div key={k} className="flex gap-4 px-4 py-2.5">
               <span className="text-small text-ink-secondary w-56 flex-shrink-0 font-mono text-xs">{k}</span>
               <span className={`text-small font-medium tabular ${v == null ? 'text-ink-muted' : 'text-ink-primary'}`}>
-                {v == null ? '—' : `RM ${v.toLocaleString()}`}
+                {v == null ? '—' : `₹${v.toLocaleString('en-IN')}`}
               </span>
             </div>
           ))}

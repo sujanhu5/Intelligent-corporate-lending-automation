@@ -178,7 +178,7 @@ export default function Dashboard() {
         <MetricCard
           label="Loan Volume"
           value={summary?.total_loan_amount_approved
-            ? `${(summary.total_loan_amount_approved / 1e7).toFixed(1)}Cr`
+            ? `₹${(summary.total_loan_amount_approved / 1e7).toFixed(1)}Cr`
             : '0'}
           severity="neutral"
           subtitle="Approved amount"
@@ -345,7 +345,7 @@ export default function Dashboard() {
                       <td className="py-2 pr-3 text-ink-primary font-semibold capitalize">{row.industry.replace(/_/g, ' ')}</td>
                       <td className="py-2 px-2 text-right tabular text-ink-secondary">{row.count}</td>
                       <td className="py-2 px-2 text-right tabular text-ink-secondary">
-                        {(row.total_loan_amount / 1e7).toFixed(2)}
+                        ₹{(row.total_loan_amount / 1e7).toFixed(2)}Cr
                       </td>
                       <td className="py-2 pl-2 text-right tabular">
                         {row.avg_risk_score != null ? (

@@ -351,4 +351,4 @@ class OCRService:
 def _fmt_currency(value: Optional[float]) -> Optional[str]:
     if value is None:
         return None
-    return f"RM {value:,.2f}"
+    return f"INR {value:,.2f}"

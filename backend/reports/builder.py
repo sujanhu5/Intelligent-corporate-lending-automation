@@ -213,11 +213,11 @@ def _risk_bg(risk_level: Optional[str]) -> colors.Color:
 
 
 def _fmt_currency(v: Optional[float]) -> str:
-    """Format as Ringgit. Helvetica has no glyph for most currency symbols,
+    """Format as INR. Helvetica has no glyph for the rupee symbol,
     so the ISO code is spelled out rather than rendered as a tofu box."""
     if v is None:
         return "N/A"
-    return f"RM {v:,.0f}"
+    return f"INR {v:,.0f}"
 
 
 def _fmt_val(v: Optional[float], is_pct: bool = False) -> str:
