@@ -278,3 +278,11 @@ The UI follows a **Digitomics-inspired design language:**
 ## License
 
 This project is developed as a Final Year Engineering Project for academic purposes.
+
+cd D:\PROJECT\Coorporate_lending_automation\backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+
+cd D:\PROJECT\Coorporate_lending_automation\frontend
+
+npm run dev
